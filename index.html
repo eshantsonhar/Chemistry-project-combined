@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <meta name="description" content="Explore atoms and molecules with ChemistryX's interactive science tools.">
+  <title>ChemistryX — A universe of chemistry</title>
+  <link rel="icon" href="/atomaker-logo.png">
+  <link rel="stylesheet" href="/home.css">
+  <script src="/theme.js" defer></script>
+</head>
+<body class="chemistryx-home">
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="ChemistryX home">
+        <span class="brand-mark" aria-hidden="true"><span></span><i></i><b></b></span>
+        <span>Chemistry<span class="brand-x">X</span></span>
+      </a>
+      <nav class="topbar-links" aria-label="Main navigation">
+        <a href="#explore">Explore</a>
+        <a href="/homepage.html">Atomaker site</a>
+      </nav>
+      <button class="theme-switch" type="button" data-theme-toggle aria-label="Switch to light mode" aria-pressed="true">
+        <span class="theme-switch-icon" aria-hidden="true">☼</span>
+        <span data-theme-label>Light mode</span>
+      </button>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-dot"></span> YOUR INTERACTIVE CHEMISTRY STUDIO</p>
+          <h1 id="hero-title">See the small<br><span>in a whole new light.</span></h1>
+          <p class="hero-description">Build atoms. Shape molecules. Follow the science from the first particle to the finished structure.</p>
+          <a class="hero-link" href="#explore">Find your starting point <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="hero-art" aria-label="Illustration of an atom and a molecule">
+          <div class="art-glow"></div>
+          <div class="orbit orbit-one"><span class="electron electron-one"></span></div>
+          <div class="orbit orbit-two"><span class="electron electron-two"></span></div>
+          <div class="orbit orbit-three"><span class="electron electron-three"></span></div>
+          <div class="nucleus"><i></i><i></i><i></i><i></i><i></i><i></i><b></b></div>
+          <div class="art-caption"><span>01 — 118</span><span>elements, at your fingertips</span></div>
+          <div class="art-crosshair crosshair-a"></div>
+          <div class="art-crosshair crosshair-b"></div>
+        </div>
+      </section>
+
+      <section class="explore" id="explore" aria-labelledby="explore-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PICK A PATH</p>
+            <h2 id="explore-title">Two ways to explore.</h2>
+          </div>
+          <p class="section-note">One curious mind. A lot of chemistry.</p>
+        </div>
+
+        <div class="app-grid">
+          <article class="app-card atommaker-card">
+            <div class="card-topline"><span>01 / ATOM BUILDER</span><span class="card-arrow" aria-hidden="true">↗</span></div>
+            <div class="card-illustration atom-card-art" aria-hidden="true">
+              <span class="mini-orbit orbit-a"><i></i></span>
+              <span class="mini-orbit orbit-b"><i></i></span>
+              <span class="mini-orbit orbit-c"><i></i></span>
+              <span class="mini-nucleus"><i></i><i></i><i></i></span>
+              <span class="art-label label-left">e⁻</span><span class="art-label label-right">p⁺</span>
+            </div>
+            <div class="card-copy">
+              <div class="card-title-row"><span class="card-icon" aria-hidden="true">✳</span><h3>Atommaker</h3></div>
+              <p>Make an element your own. Add particles, explore atomic models, and watch your atom come alive in 3D.</p>
+              <div class="feature-list"><span>118 elements</span><span>Interactive 3D</span><span>Atomic history</span></div>
+              <a class="card-cta" href="/homepage.html">Open Atommaker <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+
+          <article class="app-card atomview-card">
+            <div class="card-topline"><span>02 / MOLECULE STUDIO</span><span class="card-arrow" aria-hidden="true">↗</span></div>
+            <div class="card-illustration molecule-card-art" aria-hidden="true">
+              <span class="bond bond-one"></span><span class="bond bond-two"></span><span class="bond bond-three"></span><span class="bond bond-four"></span>
+              <span class="molecule-node node-c">C</span><span class="molecule-node node-o">O</span><span class="molecule-node node-h1">H</span><span class="molecule-node node-h2">H</span><span class="molecule-node node-n">N</span>
+              <span class="molecule-orbit"></span>
+              <span class="art-label molecule-label">H₂O · CO₂ · YOURS</span>
+            </div>
+            <div class="card-copy">
+              <div class="card-title-row"><span class="card-icon" aria-hidden="true">⌬</span><h3>AtomView</h3></div>
+              <p>Turn chemical names, SMILES, or sketches into molecules you can rotate, inspect, and understand.</p>
+              <div class="feature-list"><span>3D molecules</span><span>Structure editor</span><span>Reaction explorer</span></div>
+              <a class="card-cta" href="/atomview/">Open AtomView <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer"><a class="brand footer-brand" href="/">Chemistry<span class="brand-x">X</span></a><span>Curiosity, down to the atom.</span><a href="#explore">Back to the beginning ↑</a></footer>
+  </div>
+</body>
+</html>

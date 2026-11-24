@@ -1,0 +1,168 @@
+:root {
+  color-scheme: dark;
+  --cx-bg: #101114;
+  --cx-panel: #191b20;
+  --cx-panel-raised: #20232a;
+  --cx-ink: #f3f1ec;
+  --cx-muted: #a4a5ad;
+  --cx-line: rgba(235, 231, 220, 0.13);
+  --cx-accent: #d3ff71;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --cx-bg: #f4f3ef;
+  --cx-panel: #fffefa;
+  --cx-panel-raised: #ebe9e2;
+  --cx-ink: #1b1b1d;
+  --cx-muted: #65656c;
+  --cx-line: rgba(27, 27, 29, 0.14);
+  --cx-accent: #4a6821;
+}
+
+html[data-theme="light"] {
+  --base-clr: #f4f5f8;
+  --line-clr: #d8dce5;
+  --hover-clr: #e6e9f2;
+  --text-clr: #242a38;
+  --accent-clr: #bd4d31;
+  --accent-clr-2: #967400;
+  --accent-clr-3: #258148;
+  --accent-clr-4: #187c83;
+  --accent-clr-5: #4467bd;
+  --secondary-text-clr: #5b6271;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body:not(.chemistryx-home) {
+  background-color: var(--cx-bg) !important;
+  color: var(--cx-ink);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+html[data-theme="dark"] body:not(.chemistryx-home) header,
+html[data-theme="dark"] body:not(.chemistryx-home) .box,
+html[data-theme="dark"] body:not(.chemistryx-home) .content-box,
+html[data-theme="dark"] body:not(.chemistryx-home) .profile-side,
+html[data-theme="dark"] body:not(.chemistryx-home) .model-side,
+html[data-theme="dark"] body:not(.chemistryx-home) .card,
+html[data-theme="dark"] body:not(.chemistryx-home) article {
+  background-color: var(--cx-panel) !important;
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="dark"] body:not(.chemistryx-home) p,
+html[data-theme="dark"] body:not(.chemistryx-home) li,
+html[data-theme="dark"] body:not(.chemistryx-home) h1,
+html[data-theme="dark"] body:not(.chemistryx-home) h2,
+html[data-theme="dark"] body:not(.chemistryx-home) h3,
+html[data-theme="dark"] body:not(.chemistryx-home) h4,
+html[data-theme="dark"] body:not(.chemistryx-home) label {
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="dark"] body:not(.chemistryx-home) a {
+  color: #b6d5ff;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) header,
+html[data-theme="light"] body:not(.chemistryx-home) .box,
+html[data-theme="light"] body:not(.chemistryx-home) .content-box,
+html[data-theme="light"] body:not(.chemistryx-home) .profile-side,
+html[data-theme="light"] body:not(.chemistryx-home) .model-side,
+html[data-theme="light"] body:not(.chemistryx-home) .card,
+html[data-theme="light"] body:not(.chemistryx-home) article {
+  background-color: var(--cx-panel) !important;
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) p,
+html[data-theme="light"] body:not(.chemistryx-home) li,
+html[data-theme="light"] body:not(.chemistryx-home) h1,
+html[data-theme="light"] body:not(.chemistryx-home) h2,
+html[data-theme="light"] body:not(.chemistryx-home) h3,
+html[data-theme="light"] body:not(.chemistryx-home) h4,
+html[data-theme="light"] body:not(.chemistryx-home) label {
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) a {
+  color: #315aa1;
+}
+
+html[data-theme="light"] #sidebar {
+  background: rgba(255, 254, 250, 0.98) !important;
+  border-color: var(--line-clr) !important;
+  color: var(--text-clr) !important;
+}
+
+html[data-theme="light"] .molecule-entry-panel {
+  background: rgba(230, 233, 242, 0.82) !important;
+}
+
+.chemistryx-theme-toggle {
+  position: fixed;
+  z-index: 9999;
+  right: 22px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  border: 1px solid var(--cx-line);
+  border-radius: 999px;
+  background: var(--cx-panel);
+  color: var(--cx-ink);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22);
+  font: 600 12px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.chemistryx-theme-toggle:hover {
+  transform: translateY(-2px);
+  background: var(--cx-panel-raised);
+}
+
+.chemistryx-theme-toggle--inline {
+  position: static;
+  width: 100%;
+  margin: 4px 0;
+  justify-content: flex-start;
+  box-shadow: none;
+}
+
+.chemistryx-theme-toggle--detail {
+  top: 12px;
+  right: 12px;
+  bottom: auto;
+}
+
+.theme-toggle-mark {
+  color: var(--cx-accent);
+  font-size: 15px;
+}
+
+@media (max-width: 1024px) {
+  .chemistryx-theme-toggle--inline {
+    width: auto;
+    margin: 0;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .chemistryx-theme-toggle {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .chemistryx-theme-toggle--detail {
+    top: 12px;
+    bottom: auto;
+  }
+}

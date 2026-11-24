@@ -1,0 +1,34 @@
+{
+  "name": "chemistryx",
+  "version": "1.0.0",
+  "description": "A combined chemistry learning and molecular modeling suite",
+  "main": "parser_server.js",
+  "scripts": {
+    "build": "node scripts/build-combined.cjs",
+    "build:atomview": "node scripts/prepare-vercel-runtime.js",
+    "test:browser": "node tests/browser_organic_reactions.mjs",
+    "start": "node parser_server.js",
+    "install-deps": "npm install express cors"
+  },
+  "workspaces": [
+    "apps/atommaker"
+  ],
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.2"
+  },
+  "overrides": {
+    "qs": "^6.16.2"
+  },
+  "keywords": [
+    "molecular",
+    "parser",
+    "chemistry",
+    "cpp"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
+}

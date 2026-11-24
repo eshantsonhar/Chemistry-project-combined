@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Plan a bounded organic reaction sequence from user-supplied molecules with explicit stoichiometry, atom provenance, and evidence limits.">
+    <title>AtomView - Organic Reactions</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" defer></script>
+    <script src="../geometry-client.js" defer></script>
+    <style>
+        :root {
+            --base: #11121a;
+            --panel: #151943;
+            --line: #42434a;
+            --text: #e6e6ef;
+            --muted: #b0b3c1;
+            --accent: #ff845e;
+            --cyan: #6affe6;
+            --blue: #6aa1ff;
+            --green: #5eff5e;
+            color-scheme: dark;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--base);
+            color: var(--text);
+            font-family: Poppins, sans-serif;
+        }
+
+        a { color: var(--cyan); }
+        button, input, select, textarea { font: inherit; }
+        button { cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: .55; }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 14px clamp(16px, 4vw, 48px);
+            background: rgba(17, 18, 26, .96);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            color: var(--accent);
+            font-family: "Atomic Age", cursive;
+            font-size: 1.45rem;
+            text-decoration: none;
+        }
+
+        .back-link {
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        main { width: min(1320px, 100% - 32px); margin: 0 auto; padding: 30px 0 64px; }
+        .page-heading { margin: 0 0 20px; }
+        .page-heading h1 { margin: 0; color: var(--accent); font-size: clamp(2rem, 5vw, 3.2rem); }
+        .page-heading p { max-width: 860px; color: var(--muted); line-height: 1.7; }
+
+        .notice, .panel, .compound-list, .result-step, .result-empty {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel);
+        }
+
+        .notice {
+            margin: 20px 0;
+            padding: 16px 18px;
+            border-left: 4px solid var(--accent);
+            color: var(--text);
+        }
+
+        .notice p { margin: 5px 0; color: var(--muted); }
+        .notice strong { color: var(--accent); }
+        .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .82fr); gap: 18px; align-items: start; }
+        .layout.inspector-hidden { grid-template-columns: minmax(0, 1fr); }
+        .panel { padding: 20px; margin-bottom: 18px; }
+        .panel h2, .compound-list h2 { margin: 0 0 14px; color: var(--accent); font-size: 1.25rem; }
+        .panel h3 { margin: 0 0 10px; color: var(--cyan); font-size: 1rem; }
+        .help, .muted { color: var(--muted); }
+        .help { margin: 7px 0 14px; font-size: .9rem; }
+
+        .entry-grid { display: grid; grid-template-columns: minmax(150px, .75fr) minmax(170px, 1fr); gap: 12px; }
+        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        .field label { color: var(--muted); font-size: .9rem; }
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 10px 11px;
+            background: var(--base);
+            color: var(--text);
+        }
+        textarea { min-height: 112px; resize: vertical; font-family: Consolas, monospace; }
+        input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible {
+            outline: 2px solid var(--cyan);
+            outline-offset: 2px;
+        }
+
+        .button-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+        .option-row { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 12px; }
+        .option-row label { display: inline-flex; align-items: center; gap: 7px; color: var(--text); }
+        .option-row input { width: auto; accent-color: var(--accent); }
+        .inspector-toggle { margin: 0 0 14px; }
+        .button {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 9px 13px;
+            background: #20233c;
+            color: var(--text);
+        }
+        .button:hover:not(:disabled) { border-color: var(--cyan); }
+        .button.primary { border-color: var(--accent); background: var(--accent); color: #191319; font-weight: 700; }
+        .button.primary:hover:not(:disabled) { background: #ff9a79; }
+        .button.danger { color: #ffb6a3; }
+        .status { min-height: 1.5em; margin: 10px 0 0; color: var(--muted); }
+        .status.error { color: #ff9d8b; }
+        .status.success { color: var(--green); }
+        .inventory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .compound-list { min-height: 150px; padding: 16px; }
+        .compound-list h2 { font-size: 1.05rem; }
+        .compound-card {
+            display: grid;
+            grid-template-columns: minmax(180px, .9fr) minmax(0, 1fr);
+            gap: 12px;
+            padding: 12px 0;
+            border-top: 1px solid var(--line);
+        }
+        .depiction {
+            display: block;
+            width: 100%;
+            min-height: 150px;
+            max-height: 300px;
+            object-fit: contain;
+            border: 1px solid #d5d5d5;
+            border-radius: 7px;
+            background: #f5f4ed;
+            cursor: zoom-in;
+        }
+        .compound-card h3 { margin: 0 0 5px; color: var(--cyan); font-size: 1rem; overflow-wrap: anywhere; }
+        .compound-card p { margin: 3px 0; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+        .compound-card .smiles { font-family: Consolas, monospace; color: #c9cde0; }
+        .compound-card .button-row { margin-top: 8px; }
+        .compound-card .button { padding: 5px 8px; font-size: .78rem; }
+        .empty-list { color: var(--muted); font-size: .9rem; }
+
+        .quantity-row { display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--muted); font-size: .85rem; }
+        .quantity-row input { width: 76px; padding: 5px 7px; }
+        .reagent-row { display: grid; grid-template-columns: auto minmax(0, 1fr) 92px; gap: 10px; align-items: center; }
+        .reagent-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+        .reagent-row input[type="number"] { padding: 7px; }
+        .reagent-row small { display: block; color: var(--muted); }
+
+        .viewer-panel { position: sticky; top: 78px; }
+        .viewer-panel[hidden] { display: none; }
+        .viewer-panel h2 { margin: 0 0 5px; }
+        .viewer-note { min-height: 1.4em; color: var(--muted); font-size: .85rem; }
+        #molecule-viewer {
+            width: 100%;
+            height: 360px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: #080b18;
+        }
+        #molecule-viewer canvas { display: block; width: 100%; height: 100%; }
+        .viewer-meta { margin: 10px 0 0; color: var(--muted); font-size: .86rem; overflow-wrap: anywhere; }
+        .planner-actions { margin-top: 18px; }
+
+        #results { margin-top: 22px; }
+        .result-empty { padding: 18px; color: var(--muted); }
+        .result-step { margin: 9px 0; padding: 8px; }
+        .result-step h3 { margin: 0 0 5px; color: var(--text); font-size: .95rem; }
+        .reaction-line-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+        .reaction-line {
+            display: flex;
+            width: max-content;
+            min-width: 100%;
+            gap: 12px;
+            align-items: center;
+            padding: 9px;
+            border: 1px solid #111;
+            border-radius: 3px;
+            color: #000;
+            background: #fff;
+        }
+        .reaction-column { display: flex; flex: 0 0 auto; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 5px; }
+        .species { display: flex; flex: 0 0 140px; width: 140px; flex-direction: column; align-items: center; color: #000; }
+        .species .depiction { width: 136px; height: 96px; min-height: 0; max-height: 96px; border: 0; background: #fff; object-fit: contain; }
+        .species-name { max-width: 140px; margin: 2px 0 0; color: #000; font-size: .75rem; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+        .species-plus { flex: 0 0 auto; align-self: center; color: #000; font-size: 1.15rem; }
+        .reaction-arrow { display: flex; flex: 0 0 150px; flex-direction: column; align-items: center; gap: 6px; color: #000; text-align: center; }
+        .reaction-conditions { width: 100%; color: #000; font-size: .75rem; line-height: 1.25; overflow-wrap: anywhere; }
+        .reaction-arrow-line { width: 100%; font-size: 2rem; line-height: .8; }
+        .reaction-explanation { margin: 5px 2px; color: var(--muted); font-size: .82rem; }
+        .reaction-explanation[hidden] { display: none; }
+        .reaction-text-toggle { margin: 0 0 8px; }
+        .route-summary { margin: 6px 0; color: var(--muted); font-size: .82rem; }
+        .route-network { margin: 14px 0 18px; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: rgba(8, 11, 24, .7); }
+        .route-network h3 { margin: 0 0 4px; color: var(--cyan); font-size: .9rem; }
+        .route-network p { margin: 0 0 9px; color: var(--muted); font-size: .75rem; }
+        .route-network-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+        .route-network svg { display: block; max-width: none; }
+        .route-network .network-edge { fill: none; stroke: #7d89ad; stroke-width: 1.7; marker-end: url(#route-arrow); }
+        .route-network .network-node rect { fill: #171d3a; stroke: #69769e; stroke-width: 1.3; rx: 8; }
+        .route-network .network-node.reaction rect { fill: #25324a; stroke: #49c6b5; }
+        .route-network .network-node.target rect { fill: #3a2a1c; stroke: #ffbd69; }
+        .route-network .network-node text { fill: #f0f3ff; font: 12px system-ui, sans-serif; }
+        .route-network .network-node .node-subtitle { fill: #aeb8d4; font-size: 10px; }
+        details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+        summary { color: var(--blue); cursor: pointer; }
+        .detail-scroll { overflow-x: auto; }
+        .evidence-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: .8rem; }
+        .evidence-table th, .evidence-table td { padding: 7px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+        .evidence-table th { color: var(--cyan); }
+        .result-warning { color: #ffcb82; }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(0, 0, 0, .75);
+        }
+        .modal-backdrop.open { display: flex; }
+        .editor-modal { display: flex; flex-direction: column; width: min(1100px, 100%); height: min(820px, 94vh); background: var(--base); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+        .editor-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 14px; }
+        .editor-heading h2 { margin: 0; font-size: 1rem; color: var(--accent); }
+        #editor-frame { width: 100%; flex: 1; border: 0; background: white; }
+        .depiction-modal { display: flex; flex-direction: column; width: min(1050px, 100%); max-height: 94vh; background: white; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+        .depiction-modal .editor-heading h2 { color: #111; overflow-wrap: anywhere; }
+        #depiction-modal-image { display: block; width: 100%; max-height: calc(94vh - 60px); min-height: 220px; object-fit: contain; background: white; }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .viewer-panel { position: static; grid-row: 1; }
+            #molecule-viewer { height: 310px; }
+            .reaction-line { width: 100%; min-width: 0; flex-direction: column; gap: 5px; padding: 7px; }
+            .reaction-column { width: 100%; flex-wrap: wrap; gap: 4px; }
+            .reaction-arrow { width: 100%; flex: 0 0 auto; flex-direction: row; justify-content: center; gap: 8px; }
+            .reaction-conditions { width: auto; max-width: 85%; }
+            .reaction-arrow-line { width: auto; flex: 0 0 auto; }
+        }
+        @media (max-width: 620px) {
+            main { width: min(100% - 20px, 1320px); padding-top: 20px; }
+            .topbar { padding: 11px 14px; }
+            .logo { font-size: 1.15rem; }
+            .back-link { padding: 7px 9px; font-size: .82rem; }
+            .entry-grid, .inventory-grid { grid-template-columns: 1fr; }
+            .panel { padding: 15px; }
+            .compound-card { grid-template-columns: minmax(120px, .8fr) minmax(0, 1fr); gap: 9px; }
+            .compound-card .depiction { min-height: 130px; max-height: 220px; }
+            #molecule-viewer { height: 260px; }
+        }
+
+        main { width: min(1480px, 100% - 48px); padding: 34px 0 72px; }
+        .page-heading { margin-bottom: 18px; }
+        .page-heading .eyebrow { margin: 0 0 4px; color: var(--cyan); font-size: .75rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+        .page-heading h1 { font-size: clamp(1.8rem, 3.2vw, 2.55rem); letter-spacing: -.035em; }
+        .page-heading > p:last-child { max-width: 840px; margin: 8px 0 0; color: var(--muted); font-size: .91rem; line-height: 1.55; }
+        .workspace-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(21, 25, 67, .72); }
+        .workspace-badges, .workspace-options { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .scope-badge { padding: 5px 9px; border: 1px solid #474a68; border-radius: 999px; color: #c9cde0; font-size: .72rem; }
+        .scope-badge:first-child { border-color: #3a7b71; color: var(--cyan); }
+        .workspace-options { margin: 0; gap: 14px; }
+        .workspace-options label { color: var(--muted); font-size: .8rem; }
+        .layout, .layout.inspector-hidden { display: grid; grid-template-columns: minmax(330px, .82fr) minmax(0, 1.35fr); gap: 20px; align-items: start; }
+        .workspace-input, .workspace-results { min-width: 0; }
+        .panel, .compound-list, .result-step { border-color: #34384e; background: linear-gradient(145deg, rgba(24, 28, 58, .98), rgba(19, 22, 43, .98)); box-shadow: 0 12px 30px rgba(0, 0, 0, .13); }
+        .panel { padding: 18px; margin-bottom: 14px; }
+        .section-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .section-heading h2 { margin: 0; color: var(--text); font-size: 1.02rem; }
+        .section-heading .help { margin: 3px 0 0; font-size: .78rem; line-height: 1.45; }
+        .step-index { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid #596080; border-radius: 9px; color: var(--cyan); font-size: .72rem; font-weight: 700; }
+        .field { margin-bottom: 10px; }
+        .field label, .field > label { font-size: .8rem; }
+        .entry-grid { grid-template-columns: 1fr; gap: 8px; }
+        textarea { min-height: 86px; }
+        .button { transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+        .button:hover:not(:disabled) { transform: translateY(-1px); }
+        .inventory-grid { grid-template-columns: 1fr; gap: 12px; }
+        .compound-list { min-height: 88px; padding: 13px; }
+        .compound-list h2 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--text); font-size: .87rem; }
+        .inventory-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); }
+        .inventory-dot.wanted { background: var(--accent); }
+        .compound-card { grid-template-columns: minmax(140px, .8fr) minmax(0, 1fr); gap: 13px; padding: 12px 0 2px; }
+        .compound-card .depiction { min-height: 125px; max-height: 190px; }
+        .compound-card h3 { font-size: .9rem; }
+        .compound-card p { font-size: .75rem; }
+        .compound-card .button-row { gap: 6px; }
+        .compound-card .button { font-size: .72rem; }
+        .planner-actions { margin-top: 14px; }
+        .planner-actions > .option-row { margin-bottom: 10px; }
+        #reagent-results { max-height: 380px; overflow-y: auto; padding-right: 3px; }
+        .reagent-row { grid-template-columns: 20px minmax(0, 1fr) 68px; gap: 8px; padding: 9px 3px; border-top: 1px solid rgba(66, 67, 74, .55); }
+        .reagent-row label { font-size: .78rem; }
+        .reagent-row small { margin-top: 2px; font-size: .67rem; line-height: 1.35; }
+        .reagent-row input[type="number"] { padding: 6px; font-size: .76rem; }
+        .workspace-results { position: sticky; top: 78px; }
+        .results-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(21, 25, 67, .72); }
+        .results-heading > div { display: flex; align-items: center; gap: 10px; }
+        .results-heading h2 { margin: 0; color: var(--text); font-size: 1rem; }
+        .results-heading .button { white-space: nowrap; }
+        .result-empty { min-height: 230px; display: flex; align-items: center; justify-content: center; border: 1px dashed #454a64; border-radius: 10px; background: rgba(18, 21, 42, .65); text-align: center; line-height: 1.6; }
+        .result-step { margin: 12px 0; padding: 15px; border-radius: 10px; }
+        .result-step h3 { margin-bottom: 10px; color: var(--cyan); font-size: .88rem; }
+        .route-summary { font-size: .8rem; line-height: 1.5; }
+        .reaction-line { gap: 14px; padding: 13px; border-radius: 7px; }
+        .species { flex-basis: 210px; width: 210px; }
+        .species .depiction { width: 205px; height: 145px; max-height: 145px; }
+        .species-name { max-width: 205px; font-size: .72rem; }
+        .reaction-arrow { flex-basis: 165px; }
+        .reaction-conditions { font-size: .72rem; }
+        .result-step details { font-size: .78rem; line-height: 1.55; }
+        .result-step details h4 { margin: 14px 0 5px; color: var(--cyan); }
+        .result-warning { font-size: .77rem; line-height: 1.5; }
+        .viewer-panel { position: fixed; z-index: 15; top: 84px; right: 20px; width: min(460px, calc(100vw - 40px)); max-height: calc(100vh - 104px); overflow-y: auto; border-color: #596080; box-shadow: 0 20px 70px rgba(0, 0, 0, .55); }
+        .viewer-panel[hidden] { display: none; }
+        .viewer-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+        .viewer-heading h2 { margin: 0; font-size: 1rem; }
+        #molecule-viewer { height: min(390px, 50vh); }
+        @media (max-width: 1000px) {
+            .layout, .layout.inspector-hidden { grid-template-columns: minmax(280px, .8fr) minmax(0, 1.1fr); gap: 14px; }
+            .species { flex-basis: 175px; width: 175px; }
+            .species .depiction { width: 170px; }
+            .reaction-line { width: 100%; min-width: 0; flex-direction: column; gap: 7px; }
+            .reaction-column { width: 100%; flex-wrap: wrap; }
+            .reaction-arrow { width: 100%; flex: 0 0 auto; flex-direction: row; justify-content: center; gap: 9px; }
+            .reaction-conditions { width: auto; max-width: 86%; }
+            .reaction-arrow-line { width: auto; flex: 0 0 auto; }
+        }
+        @media (max-width: 760px) {
+            main { width: min(100% - 28px, 700px); padding-top: 24px; }
+            .workspace-toolbar { align-items: flex-start; flex-direction: column; }
+            .layout, .layout.inspector-hidden { grid-template-columns: 1fr; }
+            .workspace-results { position: static; }
+            .results-heading { align-items: flex-start; flex-direction: column; }
+            .results-heading .button { width: 100%; }
+            .viewer-panel { top: 12px; right: 12px; width: calc(100vw - 24px); max-height: calc(100vh - 24px); }
+            #molecule-viewer { height: 42vh; }
+        }
+        @media (max-width: 480px) {
+            main { width: calc(100% - 22px); }
+            .workspace-options { gap: 8px; }
+            .workspace-options label { font-size: .73rem; }
+            .compound-card { grid-template-columns: minmax(100px, .72fr) minmax(0, 1fr); gap: 8px; }
+            .compound-card .depiction { min-height: 105px; }
+            .compound-card .button-row .button { padding: 5px 6px; }
+            .species { flex-basis: 145px; width: 145px; }
+            .species .depiction { width: 140px; height: 115px; max-height: 115px; }
+            .reaction-arrow { flex-basis: 130px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a class="logo" href="../atomview_main.html">AtomView</a>
+        <a class="back-link" href="../atomview_main.html">Back to Renderer</a>
+    </header>
+    <main>
+        <header class="page-heading">
+            <p class="eyebrow">Molecular synthesis workspace</p>
+            <h1>Organic Reactions</h1>
+            <p>Build a route from supplied structures. Every proposed step is restricted to the locally represented chemistry and includes its reagents, conditions, atom balance, and source limits.</p>
+        </header>
+
+        <div class="workspace-toolbar">
+            <div class="workspace-badges">
+                <span class="scope-badge">Evidence-scoped rules</span>
+                <span class="scope-badge">No yield or feasibility prediction</span>
+            </div>
+            <div class="option-row workspace-options">
+                <label><input id="show-reaction-text" type="checkbox"> Show reaction explanations</label>
+                <label><input id="show-inspector" type="checkbox"> 3D inspector</label>
+            </div>
+        </div>
+
+        <div class="layout inspector-hidden" id="main-layout">
+            <div class="workspace-input">
+                <section class="panel" aria-labelledby="entry-heading">
+                    <div class="section-heading">
+                        <span class="step-index">01</span>
+                        <div>
+                            <h2 id="entry-heading">Define your molecules</h2>
+                            <p class="help">Add available starting materials or the structures you want to make.</p>
+                        </div>
+                    </div>
+                    <form id="compound-form">
+                        <div class="entry-grid">
+                            <div class="field">
+                                <label for="input-format">Structure format</label>
+                                <select id="input-format" name="format">
+                                    <option value="iupacName">IUPAC name</option>
+                                    <option value="smiles">SMILES</option>
+                                    <option value="molblock">MDL Molfile</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="structure-input" id="structure-label">Enter IUPAC Name</label>
+                            <textarea id="structure-input" required placeholder="For example: ethanoyl chloride"></textarea>
+                        </div>
+                        <div class="entry-grid">
+                            <div class="field">
+                                <label for="compound-quantity">Available/required stoichiometric units (not mass or moles)</label>
+                                <input id="compound-quantity" type="number" min="1" max="20" value="1" required>
+                            </div>
+                        </div>
+                        <fieldset class="option-row" style="border:0;padding:0">
+                            <legend class="muted">Add as</legend>
+                            <label><input type="radio" name="compound-role" value="starting" checked> Starting Material</label>
+                            <label><input type="radio" name="compound-role" value="target"> Final Product</label>
+                        </fieldset>
+                        <div class="button-row">
+                            <button class="button primary" id="add-compound-button" type="submit">Identify IUPAC &amp; Add</button>
+                            <button class="button" id="open-editor-button" type="button">Draw a Structure</button>
+                        </div>
+                    </form>
+                    <p class="status" id="entry-status" role="status" aria-live="polite"></p>
+                </section>
+
+                <section class="inventory-grid" aria-label="Compound inventory">
+                    <div class="compound-list">
+                        <h2><span class="inventory-dot available"></span>Starting materials</h2>
+                        <div id="starting-list"><p class="empty-list">No starting materials added.</p></div>
+                    </div>
+                    <div class="compound-list">
+                        <h2><span class="inventory-dot wanted"></span>Target products</h2>
+                        <div id="target-list"><p class="empty-list">No target products added.</p></div>
+                    </div>
+                </section>
+
+                <section class="panel planner-actions">
+                    <div class="section-heading">
+                        <span class="step-index">02</span>
+                        <div>
+                            <h2>Reagents and conditions</h2>
+                            <p class="help">Manual mode limits the search to selected reagents. Auto mode may use any supported catalogue entry; physical stock is not verified.</p>
+                        </div>
+                    </div>
+                    <div class="option-row" role="group" aria-label="Reagent selection mode">
+                        <label><input type="radio" name="reagent-mode" value="manual" checked> Manual</label>
+                        <label><input type="radio" name="reagent-mode" value="auto"> Auto</label>
+                    </div>
+                    <label class="field" for="reagent-search">
+                        Search supported reagents
+                        <input id="reagent-search" type="search" placeholder="Search by name, formula, or reaction">
+                    </label>
+                    <div id="reagent-results" aria-live="polite"></div>
+                    <p class="status" id="planner-status" role="status" aria-live="polite"></p>
+                </section>
+
+            </div>
+
+            <section class="workspace-results" id="results" aria-labelledby="results-heading">
+                <div class="results-heading">
+                    <div>
+                        <span class="step-index">03</span>
+                        <h2 id="results-heading">Synthesis route</h2>
+                    </div>
+                    <button class="button primary" id="plan-button" type="button" disabled>Find a supported route</button>
+                </div>
+                <div id="results-content" class="result-empty">Add at least one starting material and one target product, then run the planner.</div>
+            </section>
+
+            <aside class="panel viewer-panel" id="viewer-panel" aria-label="Molecular structure inspection" hidden>
+                <div class="viewer-heading">
+                    <h2 id="viewer-title">3D Structure Inspector</h2>
+                    <button class="button" id="close-inspector-button" type="button">Close</button>
+                </div>
+                <div class="viewer-note" id="viewer-note" role="status" aria-live="polite"></div>
+                <div id="molecule-viewer"><canvas id="molecule-canvas" aria-label="Interactive three-dimensional molecular structure"></canvas></div>
+                <p class="viewer-meta" id="viewer-meta"></p>
+            </aside>
+        </div>
+    </main>
+
+    <div class="modal-backdrop" id="editor-modal" aria-hidden="true">
+        <section class="editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-modal-title">
+            <div class="editor-heading">
+                <h2 id="editor-modal-title">Draw a molecular structure</h2>
+                <button class="button" id="close-editor-button" type="button">Close editor</button>
+            </div>
+            <iframe id="editor-frame" title="AtomView molecule drawing editor" src="../molecule_editor.html?organicReactions=true"></iframe>
+        </section>
+    </div>
+    <div class="modal-backdrop" id="depiction-modal" aria-hidden="true">
+        <section class="depiction-modal" role="dialog" aria-modal="true" aria-labelledby="depiction-modal-title">
+            <div class="editor-heading">
+                <h2 id="depiction-modal-title">Molecular structure</h2>
+                <button class="button" id="close-depiction-button" type="button">Close structure</button>
+            </div>
+            <img id="depiction-modal-image" alt="">
+        </section>
+    </div>
+
+    <script>
+        (() => {
+            const startingMaterials = [];
+            const targetProducts = [];
+            const elements = {
+                1: { color: 0xffffff, radius: 0.19 }, 5: { color: 0xc98a43, radius: 0.38 },
+                6: { color: 0x4c5568, radius: 0.4 }, 7: { color: 0x4777ff, radius: 0.37 },
+                8: { color: 0xff4545, radius: 0.36 }, 9: { color: 0x9de8ff, radius: 0.34 },
+                15: { color: 0xffa23a, radius: 0.43 }, 16: { color: 0xf2da3d, radius: 0.42 },
+                17: { color: 0x39bb66, radius: 0.42 }, 35: { color: 0x8e4727, radius: 0.45 },
+                53: { color: 0x8e42b5, radius: 0.48 }
+            };
+            const roleNames = { starting: "Allowed starting material", target: "Required final product" };
+            let reagentCatalogue = [];
+            let reactionRules = [];
+            const entryStatus = document.getElementById("entry-status");
+            const plannerStatus = document.getElementById("planner-status");
+            const inputFormat = document.getElementById("input-format");
+            const structureInput = document.getElementById("structure-input");
+            const editorModal = document.getElementById("editor-modal");
+            const depictionModal = document.getElementById("depiction-modal");
+            const selectedReagents = new Map();
+            let inputRevision = 0;
+            let compoundListsInitialized = false;
+            let editing = null;
+            let renderer;
+            let scene;
+            let camera;
+            let controls;
+            let moleculeGroup;
+            let pendingCompound = null;
+
+            function setStatus(element, message, kind = "") {
+                element.textContent = message;
+                element.className = `status${kind ? ` ${kind}` : ""}`;
+            }
+
+            function invalidateResults() {
+                inputRevision += 1;
+                const content = document.getElementById("results-content");
+                content.replaceChildren();
+                content.classList.add("result-empty");
+                const message = document.createElement("p");
+                message.className = "result-empty";
+                message.textContent = "Inputs changed; run the planner again to calculate an up-to-date route.";
+                content.append(message);
+                setStatus(plannerStatus, "The previous route was cleared because its inputs changed.");
+            }
+
+            function newId() {
+                return globalThis.crypto?.randomUUID
+                    ? crypto.randomUUID()
+                    : `compound-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            }
+
+            function safeText(value) {
+                return String(value ?? "");
+            }
+
+            function setEntryFormat() {
+                const format = inputFormat.value;
+                const labels = {
+                    iupacName: "Enter IUPAC Name",
+                    smiles: "Enter SMILES",
+                    molblock: "Enter MDL Molfile"
+                };
+                document.getElementById("structure-label").textContent = labels[format];
+                structureInput.placeholder = format === "iupacName"
+                    ? "For example: ethanoyl chloride"
+                    : format === "smiles"
+                        ? "For example: CC(=O)Cl"
+                        : "Paste the complete MDL Molfile block";
+            }
+
+            function renderReagentCatalog() {
+                const query = document.getElementById("reagent-search").value.trim().toLowerCase();
+                const container = document.getElementById("reagent-results");
+                container.replaceChildren();
+                if (!reagentCatalogue.length) {
+                    const empty = document.createElement("p");
+                    empty.className = "empty-list";
+                    empty.textContent = "The local reagent catalogue is not available.";
+                    container.append(empty);
+                    return;
+                }
+                const autoMode = document.querySelector('input[name="reagent-mode"]:checked').value === "auto";
+                const matches = reagentCatalogue.filter(reagent =>
+                    [
+                        reagent.name,
+                        reagent.formula,
+                        reagent.role,
+                        ...(reagent.aliases || []),
+                        ...reactionRules
+                            .filter(rule =>
+                                (rule.reagents && reagent.id in rule.reagents) ||
+                                (rule.conditionsIds || []).includes(reagent.id)
+                            )
+                            .map(rule => rule.name)
+                    ]
+                        .join(" ")
+                        .toLowerCase()
+                        .includes(query)
+                );
+                if (!matches.length) {
+                    const empty = document.createElement("p");
+                    empty.className = "empty-list";
+                    empty.textContent = "No reagent in the implemented reaction set matches that search.";
+                    container.append(empty);
+                    return;
+                }
+                matches.forEach(reagent => {
+                    const row = document.createElement("div");
+                    row.className = "reagent-row";
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `reagent-${reagent.id}`;
+                    checkbox.checked = selectedReagents.has(reagent.id);
+                    checkbox.disabled = autoMode;
+                    checkbox.addEventListener("change", () => {
+                        if (checkbox.checked) selectedReagents.set(reagent.id, selectedReagents.get(reagent.id) || 1);
+                        else selectedReagents.delete(reagent.id);
+                        invalidateResults();
+                        renderReagentCatalog();
+                    });
+                    const label = document.createElement("label");
+                    label.htmlFor = checkbox.id;
+                    label.textContent = `${reagent.name} (${reagent.formula})`;
+                    const detail = document.createElement("small");
+                    const supportedRules = reactionRules
+                        .filter(rule =>
+                            (rule.reagents && reagent.id in rule.reagents) ||
+                            (rule.conditionsIds || []).includes(reagent.id)
+                        )
+                        .map(rule => rule.name);
+                    detail.textContent = `${reagent.role}${supportedRules.length ? ` · ${supportedRules.join(", ")}` : ""}`;
+                    label.append(detail);
+                    const quantity = document.createElement("input");
+                    quantity.type = "number";
+                    quantity.min = "1";
+                    quantity.max = "100";
+                    quantity.value = String(selectedReagents.get(reagent.id) || 1);
+                    quantity.setAttribute("aria-label", `Available ${reagent.name} equivalents`);
+                    const stoichiometric = reactionRules.some(rule =>
+                        rule.reagents && reagent.id in rule.reagents
+                    );
+                    quantity.hidden = !stoichiometric;
+                    quantity.disabled = autoMode || !checkbox.checked || !stoichiometric;
+                    quantity.addEventListener("change", () => {
+                        const value = Number(quantity.value);
+                        if (!Number.isInteger(value) || value < 1 || value > 100) {
+                            quantity.value = String(selectedReagents.get(reagent.id) || 1);
+                            setStatus(plannerStatus, "Reagent availability must be an integer from 1 to 100 equivalents.", "error");
+                            return;
+                        }
+                        selectedReagents.set(reagent.id, value);
+                        invalidateResults();
+                    });
+                    row.append(checkbox, label, quantity);
+                    container.append(row);
+                });
+            }
+
+            async function loadReactionCatalogue() {
+                try {
+                    const response = await fetch("/api/reaction_planner", { method: "GET" });
+                    const catalogue = await readApiResponse(response, "Reaction planner");
+                    reagentCatalogue = catalogue.reagentCatalogue || [];
+                    reactionRules = catalogue.reactionRules || [];
+                    renderReagentCatalog();
+                } catch (error) {
+                    setStatus(plannerStatus, error.message || "The local reagent catalogue could not be loaded.", "error");
+                }
+            }
+
+            function inputPayload(value, format) {
+                if (format === "iupacName") return { iupacName: value };
+                if (format === "smiles") return { smiles: value };
+                if (format === "molblock") return { molblock: value };
+                throw new Error("Choose a supported molecular input format.");
+            }
+
+            function normalizeTypedChemicalName(value) {
+                return String(value || "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+            }
+
+            function canonicalCandidate(
+                geometry,
+                quantity,
+                source,
+                suppliedIupacName = "",
+                unchangedStructure = ""
+            ) {
+                const atoms = geometry.atoms || [];
+                const mayPreserveName =
+                    source === "iupacName" ||
+                    (unchangedStructure && geometry.metadata.canonicalSmiles === unchangedStructure);
+                const providedName = mayPreserveName ? suppliedIupacName.trim() : "";
+                if (typeof geometry.depictionSvg !== "string" || !geometry.depictionSvg.includes("<svg")) {
+                    throw new Error("The chemistry service did not return a molecular structure depiction.");
+                }
+                const iupacName = geometry.iupacName || null;
+                return {
+                    id: newId(),
+                    name: iupacName ||
+                        (geometry.naming?.status === "unverified" ? geometry.name : null) ||
+                        providedName ||
+                        geometry.name ||
+                        "IUPAC name unavailable for this structure",
+                    iupacName,
+                    providedName: providedName || null,
+                    naming: geometry.naming || {
+                        status: "unavailable",
+                        tier: "abstain",
+                        verified: false
+                    },
+                    canonicalSmiles: geometry.metadata.canonicalSmiles,
+                    depictionSvg: geometry.depictionSvg,
+                    formula: geometry.metadata.formula,
+                    molecularWeight: geometry.metadata.molecularWeight,
+                    formalCharge: geometry.metadata.formalCharge ?? atoms.reduce((sum, atom) => sum + (atom.formalCharge || 0), 0),
+                    stereochemistry: geometry.metadata.stereochemistry || [],
+                    bondStereochemistry: geometry.metadata.bondStereochemistry || [],
+                    unspecifiedStereocentres: geometry.metadata.unspecifiedStereocentres || [],
+                    warnings: geometry.metadata.warnings || [],
+                    quantity
+                };
+            }
+
+            async function resolveCandidate(payload, options = {}) {
+                if (pendingCompound) {
+                    throw new Error("Another structure is still being added. Wait for it to finish before submitting another.");
+                }
+                const format = options.format || inputFormat.value;
+                const quantity = options.quantity ?? Number(document.getElementById("compound-quantity").value);
+                if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
+                    throw new Error("Compound quantity must be an integer from 1 to 20.");
+                }
+                const geometry = await requestMolecularGeometry(payload);
+                const suppliedName = options.iupacName ?? (format === "iupacName" ? structureInput.value : "");
+                const compound = canonicalCandidate(
+                    geometry,
+                    quantity,
+                    format,
+                    suppliedName,
+                    options.unchangedStructure
+                );
+                pendingCompound = compound;
+                setStatus(
+                    entryStatus,
+                    compound.naming?.status === "verified"
+                        ? `Validated ${compound.name} (${compound.formula}); Orthonym's ${compound.naming.tier} name passed an OPSIN structure round trip.`
+                        : compound.naming?.status === "unverified"
+                            ? `Validated ${compound.formula}. ${compound.name}; this name is not verified as a Preferred IUPAC Name.`
+                            : `Structure validated (${compound.formula}). IUPAC name unavailable for this structure.`,
+                    "success"
+                );
+                return { compound, geometry };
+            }
+
+            function resetEntryForm() {
+                document.getElementById("compound-form").reset();
+                inputFormat.value = "iupacName";
+                document.getElementById("compound-quantity").value = "1";
+                document.getElementById("add-compound-button").textContent = "Identify IUPAC & Add";
+                setEntryFormat();
+            }
+
+            function commitPendingCompound(role) {
+                if (!pendingCompound) {
+                    setStatus(entryStatus, "Validate a structure before adding it.", "error");
+                    return;
+                }
+                const list = role === "starting" ? startingMaterials : targetProducts;
+                const editingExisting = Boolean(editing);
+                if (editing) {
+                    const previousList = editing.role === "starting" ? startingMaterials : targetProducts;
+                    const previousIndex = previousList.findIndex(item => item.id === editing.id);
+                    if (previousIndex >= 0) previousList.splice(previousIndex, 1);
+                    editing = null;
+                }
+                const duplicate = list.find(item => item.canonicalSmiles === pendingCompound.canonicalSmiles);
+                let addedName = pendingCompound.name;
+                if (duplicate && !editingExisting) {
+                    duplicate.quantity = Math.min(20, duplicate.quantity + pendingCompound.quantity);
+                    addedName = `${duplicate.name} (merged duplicate, quantity ${duplicate.quantity})`;
+                } else {
+                    list.push(pendingCompound);
+                }
+                const pendingWarnings = pendingCompound.warnings;
+                pendingCompound = null;
+                renderCompoundLists();
+                document.getElementById("plan-button").disabled = !startingMaterials.length || !targetProducts.length;
+                resetEntryForm();
+                if (pendingWarnings.length) {
+                    setStatus(entryStatus, `Added ${addedName}. ${pendingWarnings.join(" ")}`, "success");
+                } else {
+                    setStatus(entryStatus, `Added ${addedName} to ${role === "starting" ? "Allowed Starting Materials" : "Required Final Products"}.`, "success");
+                }
+            }
+
+            function structureImage(svg, name, className = "depiction") {
+                if (typeof svg !== "string" || !svg.includes("<svg")) {
+                    throw new Error("A real molecular structure depiction is not available.");
+                }
+                const image = document.createElement("img");
+                image.className = className;
+                image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+                image.alt = `2D molecular structure of ${name}`;
+                image.tabIndex = 0;
+                image.setAttribute("aria-haspopup", "dialog");
+                image.setAttribute("aria-label", `${image.alt}; enlarge structure`);
+                image.addEventListener("click", () => showDepiction(svg, name));
+                image.addEventListener("keydown", event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        showDepiction(svg, name);
+                    }
+                });
+                return image;
+            }
+
+            function showDepiction(svg, name) {
+                if (typeof svg !== "string" || !svg.includes("<svg")) {
+                    throw new Error("A real molecular structure depiction is not available.");
+                }
+                const image = document.getElementById("depiction-modal-image");
+                image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+                image.alt = `2D molecular structure of ${name}`;
+                document.getElementById("depiction-modal-title").textContent = name;
+                depictionModal.classList.add("open");
+                depictionModal.setAttribute("aria-hidden", "false");
+                document.getElementById("close-depiction-button").focus();
+            }
+
+            function renderCompoundLists() {
+                const renderList = (containerId, compounds, role) => {
+                    const container = document.getElementById(containerId);
+                    container.replaceChildren();
+                    if (!compounds.length) {
+                        const empty = document.createElement("p");
+                        empty.className = "empty-list";
+                        empty.textContent = role === "starting"
+                            ? "No starting materials added."
+                            : "No target products added.";
+                        container.append(empty);
+                        return;
+                    }
+                    compounds.forEach(compound => {
+                        const card = document.createElement("article");
+                        card.className = "compound-card";
+                        const depiction = structureImage(compound.depictionSvg, compound.name);
+                        const details = document.createElement("div");
+                        const title = document.createElement("h3");
+                        title.textContent = compound.name;
+                        const namingStatus = document.createElement("p");
+                        const namingTier = compound.naming?.tier;
+                        namingStatus.textContent = compound.naming?.status === "verified"
+                            ? `Naming: ${namingTier === "pin_verified" ? "verified Preferred IUPAC Name" : "verified systematic name"}`
+                            : compound.naming?.status === "unverified"
+                                ? `Naming: ${namingTier || "unverified"}; not verified as an IUPAC name`
+                                : "Naming: IUPAC name unavailable for this structure";
+                        const formula = document.createElement("p");
+                        formula.textContent = `Formula: ${compound.formula}`;
+                        const weight = document.createElement("p");
+                        weight.textContent = `Molecular weight: ${compound.molecularWeight ?? "not reported"} g/mol`;
+                        const charge = document.createElement("p");
+                        charge.textContent = `Formal charge: ${compound.formalCharge}`;
+                        const stereo = document.createElement("p");
+                        const assignedStereo = [
+                            ...compound.stereochemistry.map(item => `${item.label} at atom ${item.atomIndex}`),
+                            ...compound.bondStereochemistry.map(item => `${item.label} at bond ${item.bondIndex}`)
+                        ];
+                        const stereoDescription = [
+                            ...assignedStereo,
+                            ...compound.unspecifiedStereocentres.map(index => `unspecified center at atom ${index}`)
+                        ];
+                        stereo.textContent = `Stereochemistry: ${stereoDescription.length ? stereoDescription.join(", ") : "none specified"}`;
+                        const smiles = document.createElement("p");
+                        smiles.className = "smiles";
+                        smiles.textContent = compound.canonicalSmiles;
+                        const quantityRow = document.createElement("label");
+                        quantityRow.className = "quantity-row";
+                        quantityRow.textContent = `${role === "starting" ? "Available" : "Required"} stoichiometric units`;
+                        const quantity = document.createElement("input");
+                        quantity.type = "number";
+                        quantity.min = "1";
+                        quantity.max = "20";
+                        quantity.value = String(compound.quantity);
+                        quantity.setAttribute("aria-label", `${roleNames[role]} quantity for ${compound.name}`);
+                        quantity.addEventListener("change", () => {
+                            const value = Number(quantity.value);
+                            if (!Number.isInteger(value) || value < 1 || value > 20) {
+                                quantity.value = String(compound.quantity);
+                                setStatus(entryStatus, "Compound quantity must be an integer from 1 to 20.", "error");
+                                return;
+                            }
+                            compound.quantity = value;
+                            invalidateResults();
+                        });
+                        quantityRow.append(quantity);
+                        const buttons = document.createElement("div");
+                        buttons.className = "button-row";
+                        const inspect = document.createElement("button");
+                        inspect.className = "button";
+                        inspect.type = "button";
+                        inspect.textContent = "Inspect 3D";
+                        inspect.addEventListener("click", () => inspectCompound(compound));
+                        const move = document.createElement("button");
+                        move.className = "button";
+                        move.type = "button";
+                        move.textContent = role === "starting" ? "Move to Final Products" : "Move to Starting Materials";
+                        move.addEventListener("click", () => moveCompound(compound, role));
+                        const edit = document.createElement("button");
+                        edit.className = "button";
+                        edit.type = "button";
+                        edit.textContent = "Edit";
+                        edit.addEventListener("click", () => editCompound(compound, role));
+                        const remove = document.createElement("button");
+                        remove.className = "button danger";
+                        remove.type = "button";
+                        remove.textContent = "Remove";
+                        remove.addEventListener("click", () => removeCompound(compound, role));
+                        buttons.append(inspect, move, edit, remove);
+                        details.append(title, namingStatus, formula, weight, charge, stereo, smiles, quantityRow, buttons);
+                        card.append(depiction, details);
+                        container.append(card);
+                    });
+                };
+                renderList("starting-list", startingMaterials, "starting");
+                renderList("target-list", targetProducts, "target");
+                if (compoundListsInitialized) invalidateResults();
+                else compoundListsInitialized = true;
+            }
+
+            function editCompound(compound, role) {
+                if (pendingCompound) {
+                    setStatus(entryStatus, "Finish adding the current structure before editing another compound.", "error");
+                    return;
+                }
+                editing = {
+                    id: compound.id,
+                    role,
+                    iupacName: compound.providedName,
+                    canonicalSmiles: compound.canonicalSmiles
+                };
+                document.getElementById("input-format").value = "smiles";
+                setEntryFormat();
+                structureInput.value = compound.canonicalSmiles;
+                document.querySelector(`input[name="compound-role"][value="${role}"]`).checked = true;
+                document.getElementById("compound-quantity").value = String(compound.quantity);
+                document.getElementById("add-compound-button").textContent = "Identify IUPAC & Add";
+                structureInput.focus();
+            }
+
+            function moveCompound(compound, role) {
+                const source = role === "starting" ? startingMaterials : targetProducts;
+                const destination = role === "starting" ? targetProducts : startingMaterials;
+                const index = source.findIndex(item => item.id === compound.id);
+                if (index < 0) return;
+                source.splice(index, 1);
+                destination.push(compound);
+                renderCompoundLists();
+                document.getElementById("plan-button").disabled = !startingMaterials.length || !targetProducts.length;
+            }
+
+            function removeCompound(compound, role) {
+                const list = role === "starting" ? startingMaterials : targetProducts;
+                const index = list.findIndex(item => item.id === compound.id);
+                if (index >= 0) list.splice(index, 1);
+                if (editing?.id === compound.id) editing = null;
+                renderCompoundLists();
+                document.getElementById("plan-button").disabled = !startingMaterials.length || !targetProducts.length;
+            }
+
+            function initializeViewer() {
+                if (renderer) return;
+                const canvas = document.getElementById("molecule-canvas");
+                const container = document.getElementById("molecule-viewer");
+                if (!window.THREE || !THREE.OrbitControls) {
+                    throw new Error("The 3D viewer library did not load. Check the network connection and reload the page.");
+                }
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x080b18);
+                camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+                camera.position.set(0, 0, 12);
+                renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+                const light = new THREE.DirectionalLight(0xffffff, 0.85);
+                light.position.set(5, 8, 10);
+                scene.add(light);
+                moleculeGroup = new THREE.Group();
+                scene.add(moleculeGroup);
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                const resize = () => {
+                    const { width, height } = container.getBoundingClientRect();
+                    if (!width || !height) return;
+                    renderer.setSize(width, height, false);
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                };
+                new ResizeObserver(resize).observe(container);
+                resize();
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                };
+                animate();
+            }
+
+            function clearViewer() {
+                if (!moleculeGroup) return;
+                while (moleculeGroup.children.length) {
+                    const child = moleculeGroup.children[0];
+                    moleculeGroup.remove(child);
+                    child.geometry?.dispose();
+                    if (Array.isArray(child.material)) child.material.forEach(material => material.dispose());
+                    else child.material?.dispose();
+                }
+            }
+
+            function addBond(start, end, order, group) {
+                const startVector = new THREE.Vector3(start.x, start.y, start.z);
+                const endVector = new THREE.Vector3(end.x, end.y, end.z);
+                const direction = new THREE.Vector3().subVectors(endVector, startVector);
+                const length = direction.length();
+                if (!length) return;
+                direction.normalize();
+                const reference = Math.abs(direction.dot(new THREE.Vector3(0, 0, 1))) < .9
+                    ? new THREE.Vector3(0, 0, 1)
+                    : new THREE.Vector3(1, 0, 0);
+                const perpendicular = new THREE.Vector3().crossVectors(direction, reference).normalize();
+                const lines = order >= 2.5 ? [-.12, 0, .12] : order >= 1.5 ? [-.09, .09] : [0];
+                lines.forEach(offset => {
+                    const shift = perpendicular.clone().multiplyScalar(offset);
+                    const from = startVector.clone().add(shift);
+                    const to = endVector.clone().add(shift);
+                    const axis = new THREE.Vector3().subVectors(to, from).normalize();
+                    const geometry = new THREE.CylinderGeometry(.055, .055, length, 8);
+                    const bond = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x8f98ab }));
+                    bond.position.copy(from.clone().add(to).multiplyScalar(.5));
+                    bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+                    group.add(bond);
+                });
+            }
+
+            function showGeometry(geometry, title) {
+                initializeViewer();
+                clearViewer();
+                const positions = geometry.atoms.map(atom => atom.position);
+                geometry.bonds.forEach(bond => addBond(positions[bond.from], positions[bond.to], bond.order, moleculeGroup));
+                geometry.atoms.forEach(atom => {
+                    const appearance = elements[atom.atomicNumber] || { color: 0xd354d8, radius: .38 };
+                    const mesh = new THREE.Mesh(
+                        new THREE.SphereGeometry(atom.element === "H" ? .2 : appearance.radius, 20, 16),
+                        new THREE.MeshLambertMaterial({ color: appearance.color })
+                    );
+                    mesh.position.set(atom.position.x, atom.position.y, atom.position.z);
+                    moleculeGroup.add(mesh);
+                });
+                const center = new THREE.Box3().setFromObject(moleculeGroup).getCenter(new THREE.Vector3());
+                moleculeGroup.position.sub(center);
+                const size = new THREE.Box3().setFromObject(moleculeGroup).getSize(new THREE.Vector3());
+                const maxDimension = Math.max(size.x, size.y, size.z, 2);
+                camera.position.set(0, 0, maxDimension * 2.1);
+                camera.near = Math.max(.01, maxDimension / 500);
+                camera.far = maxDimension * 30;
+                camera.updateProjectionMatrix();
+                controls.target.set(0, 0, 0);
+                controls.update();
+                document.getElementById("viewer-title").textContent = title;
+                document.getElementById("viewer-note").textContent = `${geometry.metadata.formula}; ${geometry.metadata.forceField} conformer`;
+                document.getElementById("viewer-meta").textContent = geometry.metadata.warnings.join(" ");
+            }
+
+            function setInspectorVisible(visible) {
+                document.getElementById("show-inspector").checked = visible;
+                document.getElementById("viewer-panel").hidden = !visible;
+                document.getElementById("main-layout").classList.toggle("inspector-hidden", !visible);
+            }
+
+            async function inspectCompound(compound) {
+                setInspectorVisible(true);
+                const note = document.getElementById("viewer-note");
+                note.className = "viewer-note";
+                note.textContent = `Generating conformer for ${compound.name}...`;
+                try {
+                    const geometry = await requestMolecularGeometry({ smiles: compound.canonicalSmiles });
+                    showGeometry(geometry, `3D Structure: ${compound.name}`);
+                } catch (error) {
+                    note.textContent = error.message || "3D conformer generation failed.";
+                    note.className = "viewer-note status error";
+                }
+            }
+
+            async function readApiResponse(response, serviceName) {
+                const contentType = response.headers.get("content-type") || "unknown content type";
+                const text = await response.text();
+                if (!contentType.toLowerCase().includes("application/json")) {
+                    throw new Error(
+                        `${serviceName} returned HTTP ${response.status} with ${contentType}, not JSON. ` +
+                        "The site may be running without its project API functions, or the deployment route may be misconfigured."
+                    );
+                }
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    throw new Error(`${serviceName} returned malformed JSON (HTTP ${response.status}).`);
+                }
+                if (!result || typeof result !== "object" || Array.isArray(result)) {
+                    throw new Error(`${serviceName} returned an invalid response shape (HTTP ${response.status}).`);
+                }
+                if (!response.ok) {
+                    const error = result.error;
+                    const message = typeof error === "string" ? error : error?.message;
+                    const code = typeof error === "object" ? error?.code : null;
+                    const requestId = result.requestId || (typeof error === "object" ? error?.requestId : null);
+                    const context = [code, requestId && `request ${requestId}`].filter(Boolean).join("; ");
+                    throw new Error(
+                        `${message || `${serviceName} failed (HTTP ${response.status}).`}` +
+                        (context ? ` (${context})` : "")
+                    );
+                }
+                return result;
+            }
+
+            function isUnavailableName(value) {
+                return value === "IUPAC name unavailable for this structure";
+            }
+
+            function nameForStructure(smiles, fallbackFormula) {
+                const inventory = [...startingMaterials, ...targetProducts];
+                const known = inventory.find(compound => compound.canonicalSmiles === smiles);
+                if (known?.iupacName) return known.iupacName;
+                if (known?.providedName) return `Provided name (not independently verified): ${known.providedName}`;
+                if (known?.name && !isUnavailableName(known.name)) return known.name;
+                return fallbackFormula || "IUPAC name unavailable for this structure";
+            }
+
+            function renderSpeciesColumn(species) {
+                const column = document.createElement("div");
+                column.className = "reaction-column";
+                species.forEach(item => {
+                    if (column.childElementCount) {
+                        const plus = document.createElement("span");
+                        plus.className = "species-plus";
+                        plus.setAttribute("aria-label", "plus");
+                        plus.textContent = "+";
+                        column.append(plus);
+                    }
+                    const speciesView = document.createElement("div");
+                    speciesView.className = "species";
+                    const displayName = item.iupacName ||
+                        (item.providedName && `Provided name (not independently verified): ${item.providedName}`) ||
+                        (item.name && !isUnavailableName(item.name) && item.name) ||
+                        nameForStructure(item.canonicalSmiles, item.formula);
+                    const depiction = structureImage(item.depictionSvg, displayName);
+                    const name = document.createElement("p");
+                    name.className = "species-name";
+                    name.textContent = displayName;
+                    if (item.formula && displayName === item.formula) {
+                        name.title = "IUPAC name unavailable; molecular formula shown";
+                        name.setAttribute(
+                            "aria-label",
+                            `${item.formula}; IUPAC name unavailable for this structure`
+                        );
+                    }
+                    speciesView.append(depiction, name);
+                    column.append(speciesView);
+                });
+                return column;
+            }
+
+            function sourceAtomLabel(origin) {
+                if (origin.parentAtomIndex !== undefined) {
+                    return `atom ${origin.parentAtomIndex} - H${origin.hydrogenOrdinal}`;
+                }
+                return `atom ${origin.atomIndex}`;
+            }
+
+            function renderRouteNetwork(network) {
+                if (!network || network.type !== "reaction-network-dag" || !Array.isArray(network.nodes)) return null;
+                const consumedSpecies = new Set(network.edges
+                    .filter(edge => edge.relation === "consumed-by")
+                    .map(edge => edge.from));
+                const visibleNodes = network.nodes.filter(node => node.type === "reaction"
+                    || (node.type === "species" && node.sourceType === "startingMaterial")
+                    || (node.type === "species" && (node.isTarget || consumedSpecies.has(node.id))));
+                const byId = new Map(visibleNodes.map(node => [node.id, node]));
+                const edges = network.edges.filter(edge => byId.has(edge.from) && byId.has(edge.to)
+                    && ["consumed-by", "produced"].includes(edge.relation));
+                const incoming = new Map(visibleNodes.map(node => [node.id, []]));
+                edges.forEach(edge => incoming.get(edge.to).push(edge.from));
+                const levels = new Map();
+                (network.topologicalOrder || visibleNodes.map(node => node.id)).forEach(id => {
+                    if (!byId.has(id)) return;
+                    const parents = incoming.get(id) || [];
+                    levels.set(id, parents.length ? Math.max(...parents.map(parent => levels.get(parent) || 0)) + 1 : 0);
+                });
+                const columns = new Map();
+                visibleNodes.forEach(node => {
+                    const level = levels.get(node.id) || 0;
+                    if (!columns.has(level)) columns.set(level, []);
+                    columns.get(level).push(node);
+                });
+                const routeOrder = node => {
+                    if (node.type === "reaction") return node.step;
+                    const producerSteps = edges
+                        .filter(edge => edge.to === node.id && edge.relation === "produced")
+                        .map(edge => byId.get(edge.from)?.step)
+                        .filter(Number.isFinite);
+                    if (producerSteps.length) return Math.min(...producerSteps);
+                    const consumerSteps = edges
+                        .filter(edge => edge.from === node.id && edge.relation === "consumed-by")
+                        .map(edge => byId.get(edge.to)?.step)
+                        .filter(Number.isFinite);
+                    return consumerSteps.length ? Math.min(...consumerSteps) : Number.MAX_SAFE_INTEGER;
+                };
+                columns.forEach(column => column.sort((a, b) => routeOrder(a) - routeOrder(b)
+                    || String(a.name || a.id).localeCompare(String(b.name || b.id))));
+                const width = Math.max(700, Math.max(1, ...Array.from(columns.values(), column => column.length)) * 214 + 28);
+                const height = Math.max(1, ...columns.keys()) * 112 + 100;
+                const positions = new Map();
+                columns.forEach((column, level) => column.forEach((node, row) => {
+                    const nodeWidth = 188, gap = 26;
+                    const groupWidth = column.length * nodeWidth + (column.length - 1) * gap;
+                    const x = Math.max(16, (width - groupWidth) / 2 + row * (nodeWidth + gap));
+                    positions.set(node.id, { x, y: 16 + level * 112 });
+                }));
+                const panel = document.createElement("section");
+                panel.className = "route-network";
+                panel.dataset.convergent = String((network.convergentReactionIds || []).length > 0);
+                panel.setAttribute("aria-label", "Reaction route dependency network");
+                const heading = document.createElement("h3");
+                heading.textContent = "Material dependency network";
+                const note = document.createElement("p");
+                const merges = network.convergentReactionIds?.length || 0;
+                note.textContent = `${network.inputSpeciesIds?.length || 0} feedstock units · ${network.reactionOrder?.length || 0} reactions · ${merges} branch merge${merges === 1 ? "" : "s"}. Coproducts and stoichiometric reagents are listed in each step.`;
+                const scroll = document.createElement("div");
+                scroll.className = "route-network-scroll";
+                scroll.tabIndex = 0;
+                scroll.setAttribute("role", "region");
+                scroll.setAttribute("aria-label", "Scrollable reaction dependency graph");
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", width);
+                svg.setAttribute("height", height);
+                svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+                svg.setAttribute("role", "img");
+                svg.setAttribute("aria-label", "Directed acyclic graph of starting materials, reaction steps, reagents, and products");
+                const defs = document.createElementNS(svg.namespaceURI, "defs");
+                const marker = document.createElementNS(svg.namespaceURI, "marker");
+                marker.setAttribute("id", "route-arrow");
+                marker.setAttribute("markerWidth", "8"); marker.setAttribute("markerHeight", "8");
+                marker.setAttribute("refX", "7"); marker.setAttribute("refY", "4"); marker.setAttribute("orient", "auto");
+                const arrowHead = document.createElementNS(svg.namespaceURI, "path");
+                arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 z"); arrowHead.setAttribute("fill", "#7d89ad");
+                marker.append(arrowHead); defs.append(marker); svg.append(defs);
+                edges.forEach(edge => {
+                    const from = positions.get(edge.from), to = positions.get(edge.to);
+                    if (!from || !to) return;
+                    const path = document.createElementNS(svg.namespaceURI, "path");
+                    const x1 = from.x + 94, y1 = from.y + 68, x2 = to.x + 94, y2 = to.y;
+                    path.setAttribute("d", `M ${x1} ${y1} C ${x1} ${y1 + 24}, ${x2} ${y2 - 24}, ${x2} ${y2}`);
+                    path.setAttribute("class", "network-edge"); svg.append(path);
+                });
+                visibleNodes.forEach(node => {
+                    const position = positions.get(node.id);
+                    if (!position) return;
+                    const group = document.createElementNS(svg.namespaceURI, "g");
+                    group.setAttribute("class", `network-node ${node.type}${node.isTarget ? " target" : ""}`);
+                    const box = document.createElementNS(svg.namespaceURI, "rect");
+                    box.setAttribute("x", position.x); box.setAttribute("y", position.y); box.setAttribute("width", "188"); box.setAttribute("height", "68");
+                    const title = document.createElementNS(svg.namespaceURI, "title");
+                    title.textContent = `${node.name || node.id}${node.formula ? ` (${node.formula})` : ""}${node.type === "reaction" && node.unitOperations?.length ? `. Required process operation: ${node.unitOperations.map(item => item.name).join("; ")}.` : ""}`;
+                    group.setAttribute("aria-label", title.textContent);
+                    const label = document.createElementNS(svg.namespaceURI, "text");
+                    label.setAttribute("x", position.x + 10); label.setAttribute("y", position.y + 25);
+                    label.textContent = safeText(node.name || node.id).slice(0, 25);
+                    const subtitle = document.createElementNS(svg.namespaceURI, "text");
+                    subtitle.setAttribute("class", "node-subtitle"); subtitle.setAttribute("x", position.x + 10); subtitle.setAttribute("y", position.y + 47);
+                    subtitle.textContent = node.type === "reaction"
+                        ? `Step ${node.step} · ${node.convergent ? "branch merge" : "reaction"}${node.unitOperations?.length ? " · separation required" : node.reagents?.length ? ` · ${node.reagents[0]}` : ""}`.slice(0, 36)
+                        : `${node.formula || "material"}${node.isTarget ? " · target" : ""}`;
+                    group.append(box, title, label, subtitle); svg.append(group);
+                });
+                scroll.append(svg); panel.append(heading, note, scroll);
+                return panel;
+            }
+
+            function renderResults(result) {
+                const content = document.getElementById("results-content");
+                content.replaceChildren();
+                content.classList.remove("result-empty");
+                if (result.status !== "route-found") {
+                    content.classList.add("result-empty");
+                    const message = document.createElement("p");
+                    message.className = "result-empty";
+                    message.textContent = result.message || "No route was found in the supported reaction set.";
+                    content.append(message);
+                    return;
+                }
+                if (!result.route.length) {
+                    content.classList.add("result-empty");
+                    const message = document.createElement("p");
+                    message.className = "result-empty";
+                    message.textContent = result.identityMessage ||
+                        "All requested target molecular graphs are already present in the supplied starting-material inventory.";
+                    content.append(message);
+                    return;
+                }
+                const summary = document.createElement("p");
+                summary.className = "route-summary";
+                summary.textContent = result.search.optimalWithinModeledRules
+                    ? `Best-supported route within the modeled rules and search limits: ${result.route.length} step${result.route.length === 1 ? "" : "s"}. Ranked by ${result.search.objective}.`
+                    : `A route was found within current search limits, but optimality has not been established.`;
+                content.append(summary);
+                const network = renderRouteNetwork(result.routeNetwork);
+                if (network) content.append(network);
+                if (result.reagentsUsed?.length) {
+                    const used = document.createElement("p");
+                    used.className = "route-summary";
+                    used.textContent = `Route reagent requirements: ${result.reagentsUsed
+                        .map(item => `${item.name} × ${item.quantity}`)
+                        .join(", ")}.`;
+                    content.append(used);
+                }
+                result.route.forEach(step => {
+                    const section = document.createElement("article");
+                    section.className = "result-step";
+                    const title = document.createElement("h3");
+                    title.textContent = `Step ${step.step}`;
+                    const safety = document.createElement("p");
+                    safety.className = "result-warning";
+                    safety.textContent = `Hazard notice: ${step.safetyNotes}`;
+                    const lineScroll = document.createElement("div");
+                    lineScroll.className = "reaction-line-scroll";
+                    lineScroll.setAttribute("role", "region");
+                    lineScroll.setAttribute("aria-label", `Step ${step.step} reaction scheme`);
+                    lineScroll.tabIndex = 0;
+                    const line = document.createElement("div");
+                    line.className = "reaction-line";
+                    const arrow = document.createElement("div");
+                    arrow.className = "reaction-arrow";
+                    const conditions = document.createElement("span");
+                    conditions.className = "reaction-conditions";
+                    conditions.textContent = step.conditions;
+                    const arrowLine = document.createElement("span");
+                    arrowLine.className = "reaction-arrow-line";
+                    arrowLine.setAttribute("aria-label", "reaction arrow");
+                    arrowLine.textContent = "→";
+                    arrow.append(conditions, arrowLine);
+                    line.append(renderSpeciesColumn(step.reactants), arrow, renderSpeciesColumn(step.products));
+                    lineScroll.append(line);
+                    const explanation = document.createElement("p");
+                    explanation.className = "reaction-explanation";
+                    explanation.textContent = `${step.shortDescription} ${step.explanation}`;
+                    explanation.hidden = !document.getElementById("show-reaction-text").checked;
+                    const processOperations = document.createElement("p");
+                    processOperations.className = "result-warning";
+                    processOperations.textContent = step.unitOperations?.length
+                        ? `Required process operation: ${step.unitOperations.map(item => `${item.name}. ${item.description}`).join(" ")}`
+                        : "";
+                    const details = document.createElement("details");
+                    const summary = document.createElement("summary");
+                    summary.textContent = "Inspect atom provenance, bond changes, validation, and evidence limits";
+                    details.append(summary);
+                    const atomHeading = document.createElement("h4");
+                    atomHeading.textContent = "Product atom provenance";
+                    details.append(atomHeading);
+                    const originNote = document.createElement("p");
+                    originNote.className = "muted";
+                    originNote.textContent = step.validation.atomIndexMeaning;
+                    details.append(originNote);
+                    const tableWrap = document.createElement("div");
+                    tableWrap.className = "detail-scroll";
+                    const table = document.createElement("table");
+                    table.className = "evidence-table";
+                    const header = document.createElement("tr");
+                    ["Product", "Atom", "Source", "Source atom index"].forEach(value => {
+                        const cell = document.createElement("th");
+                        cell.textContent = value;
+                        header.append(cell);
+                    });
+                    table.append(header);
+                    step.products.forEach(product => product.atoms.forEach(atom => {
+                        const row = document.createElement("tr");
+                        [product.formula, atom.element, atom.origin.sourceName || atom.origin.sourceId, sourceAtomLabel(atom.origin)].forEach(value => {
+                            const cell = document.createElement("td");
+                            cell.textContent = safeText(value);
+                            row.append(cell);
+                        });
+                        table.append(row);
+                    }));
+                    tableWrap.append(table);
+                    details.append(tableWrap);
+                    const changeHeading = document.createElement("h4");
+                    changeHeading.textContent = "Bond changes";
+                    details.append(changeHeading);
+                    const changes = document.createElement("ul");
+                    step.bondChanges.forEach(change => {
+                        const item = document.createElement("li");
+                        item.textContent = `${change.change}: ${change.from.element} from ${change.from.sourceName} ${sourceAtomLabel(change.from)} to ${change.to.element} from ${change.to.sourceName} ${sourceAtomLabel(change.to)}`;
+                        changes.append(item);
+                    });
+                    details.append(changes);
+                    const validation = document.createElement("p");
+                    validation.textContent = `Validation: sanitized product graphs; atom/provenance and charge balance checked. Reaction feasibility is limited to the curated rule.`;
+                    details.append(validation);
+                    const evidence = document.createElement("p");
+                    evidence.className = "result-warning";
+                    evidence.textContent = `Evidence class: ${step.evidence.classification}. ${step.evidence.limitations.join(" ")}`;
+                    details.append(evidence);
+                    const reagentSummary = document.createElement("p");
+                    reagentSummary.textContent = `Stoichiometric reagents: ${
+                        step.reagents.length
+                            ? step.reagents.map(item => `${item.name} (${item.formula}) × ${item.quantity}`).join(", ")
+                            : "none listed"
+                    }. Conditions: ${
+                        step.conditionsUsed.length
+                            ? step.conditionsUsed.map(item => `${item.name} (${item.role})`).join(", ")
+                            : "none separately listed"
+                    }.`;
+                    details.append(reagentSummary);
+                    const references = document.createElement("ul");
+                    step.evidence.references.forEach(reference => {
+                        const item = document.createElement("li");
+                        item.textContent = `${reference.source}: ${reference.label}`;
+                        references.append(item);
+                    });
+                    if (references.children.length) details.append(references);
+                    section.append(title, lineScroll);
+                    if (processOperations.textContent) section.append(processOperations);
+                    section.append(explanation, details);
+                    details.append(safety);
+                    content.append(section);
+                });
+            }
+
+            async function planRoute() {
+                const button = document.getElementById("plan-button");
+                if (!startingMaterials.length || !targetProducts.length) {
+                    renderResults({
+                        status: "no-supported-route",
+                        message: "Add at least one starting material and one target product, then run the planner."
+                    });
+                    setStatus(plannerStatus, "Add at least one starting material and one target product.", "error");
+                    return;
+                }
+                const requestRevision = inputRevision;
+                const reagentMode = document.querySelector('input[name="reagent-mode"]:checked').value;
+                button.disabled = true;
+                renderResults({ status: "no-supported-route", message: "Searching the supported reaction set..." });
+                setStatus(plannerStatus, "Searching the evidence-listed reaction rules against your material and reagent inventory...");
+                try {
+                    const response = await fetch("/api/reaction_planner", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            startingMaterials: startingMaterials.map(({ id, providedName, canonicalSmiles, quantity }) => ({
+                                id, name: providedName, smiles: canonicalSmiles, quantity
+                            })),
+                            targetProducts: targetProducts.map(({ id, providedName, canonicalSmiles, quantity }) => ({
+                                id, name: providedName, smiles: canonicalSmiles, quantity
+                            })),
+                            reagents: reagentMode === "manual"
+                                ? Object.fromEntries(selectedReagents)
+                                : {},
+                            reagentMode
+                        })
+                    });
+                    const result = await readApiResponse(response, "Reaction planner");
+                    if (requestRevision !== inputRevision) return;
+                    renderResults(result);
+                    if (result.status === "route-found") {
+                        setStatus(plannerStatus, "Search completed. Route quality is limited to the represented chemistry, supplied inventory, and configured search limits.", "success");
+                    } else {
+                        setStatus(plannerStatus, result.message || "No supported route was found.", "error");
+                    }
+                } catch (error) {
+                    if (requestRevision !== inputRevision) return;
+                    renderResults({
+                        status: "no-supported-route",
+                        message: error.message || "Reaction planning failed."
+                    });
+                    setStatus(plannerStatus, error.message || "Reaction planning failed.", "error");
+                } finally {
+                    button.disabled = !startingMaterials.length || !targetProducts.length;
+                }
+            }
+
+            document.getElementById("compound-form").addEventListener("submit", async event => {
+                event.preventDefault();
+                const button = document.getElementById("add-compound-button");
+                const value = inputFormat.value === "iupacName"
+                    ? normalizeTypedChemicalName(structureInput.value)
+                    : structureInput.value.trim();
+                if (!value) {
+                    setStatus(entryStatus, "Enter a molecular structure or IUPAC name.", "error");
+                    return;
+                }
+                const quantity = Number(document.getElementById("compound-quantity").value);
+                const role = document.querySelector('input[name="compound-role"]:checked')?.value;
+                if (role !== "starting" && role !== "target") {
+                    setStatus(entryStatus, "Choose whether this structure is a starting material or final product.", "error");
+                    return;
+                }
+                button.disabled = true;
+                setStatus(entryStatus, "Parsing and validating the structure; generating a 3D conformer...");
+                try {
+                    const payload = inputPayload(value, inputFormat.value);
+                    const format = inputFormat.value;
+                    await resolveCandidate(payload, {
+                        quantity,
+                        format,
+                        iupacName: editing?.iupacName || undefined,
+                        unchangedStructure: editing?.canonicalSmiles || ""
+                    });
+                    commitPendingCompound(role);
+                } catch (error) {
+                    setStatus(entryStatus, error.message || "The structure could not be validated.", "error");
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
+            document.getElementById("plan-button").addEventListener("click", planRoute);
+            inputFormat.addEventListener("change", setEntryFormat);
+            document.getElementById("reagent-search").addEventListener("input", renderReagentCatalog);
+            document.querySelectorAll('input[name="reagent-mode"]').forEach(radio => {
+                radio.addEventListener("change", () => {
+                    invalidateResults();
+                    renderReagentCatalog();
+                });
+            });
+            document.getElementById("show-reaction-text").addEventListener("change", event => {
+                document.querySelectorAll(".reaction-explanation").forEach(description => {
+                    description.hidden = !event.target.checked;
+                });
+            });
+            document.getElementById("show-inspector").addEventListener("change", event => {
+                setInspectorVisible(event.target.checked);
+            });
+            document.getElementById("close-inspector-button").addEventListener("click", () => {
+                setInspectorVisible(false);
+            });
+            document.getElementById("open-editor-button").addEventListener("click", () => {
+                editorModal.classList.add("open");
+                editorModal.setAttribute("aria-hidden", "false");
+                document.getElementById("close-editor-button").focus();
+            });
+            document.getElementById("close-editor-button").addEventListener("click", () => {
+                editorModal.classList.remove("open");
+                editorModal.setAttribute("aria-hidden", "true");
+                document.getElementById("open-editor-button").focus();
+            });
+            editorModal.addEventListener("click", event => {
+                if (event.target === editorModal) document.getElementById("close-editor-button").click();
+            });
+            document.getElementById("close-depiction-button").addEventListener("click", () => {
+                depictionModal.classList.remove("open");
+                depictionModal.setAttribute("aria-hidden", "true");
+            });
+            depictionModal.addEventListener("click", event => {
+                if (event.target === depictionModal) {
+                    document.getElementById("close-depiction-button").click();
+                }
+            });
+            window.addEventListener("keydown", event => {
+                if (event.key === "Escape" && editorModal.classList.contains("open")) {
+                    document.getElementById("close-editor-button").click();
+                } else if (event.key === "Escape" && depictionModal.classList.contains("open")) {
+                    document.getElementById("close-depiction-button").click();
+                }
+            });
+            window.addEventListener("message", async event => {
+                const editorFrame = document.getElementById("editor-frame");
+                if (event.source !== editorFrame.contentWindow || event.origin !== window.location.origin) return;
+                if (event.data?.type !== "renderMolecule") return;
+                try {
+                    const atoms = event.data.data?.atoms;
+                    const bonds = event.data.data?.bonds;
+                    if (!Array.isArray(atoms) || !Array.isArray(bonds) || !atoms.length) {
+                        throw new Error("The editor did not provide a valid atom-and-bond graph.");
+                    }
+                    const indexById = new Map();
+                    const graphAtoms = atoms.map((atom, index) => {
+                        if (!atom || typeof atom.element !== "string" || atom.id == null || indexById.has(atom.id)) {
+                            throw new Error(`Editor atom ${index + 1} has invalid or duplicate data.`);
+                        }
+                        indexById.set(atom.id, index);
+                        return {
+                            element: atom.element,
+                            formalCharge: atom.formalCharge ?? atom.charge ?? 0,
+                            isotope: atom.isotope ?? 0,
+                            aromatic: atom.aromatic ?? false,
+                            chiralTag: atom.chiralTag,
+                            explicitHydrogens: atom.explicitHydrogens
+                        };
+                    });
+                    const graphBonds = bonds.map((bond, index) => {
+                        const from = indexById.get(bond?.from);
+                        const to = indexById.get(bond?.to);
+                        if (from === undefined || to === undefined) throw new Error(`Editor bond ${index + 1} points to a missing atom.`);
+                        return { from, to, order: bond.order ?? 1, stereo: bond.stereo, stereoAtoms: bond.stereoAtoms };
+                    });
+                    const graph = {
+                        graph: {
+                            atoms: graphAtoms,
+                            bonds: graphBonds
+                        }
+                    };
+                    const result = await resolveCandidate(
+                        graph,
+                        {
+                            format: "drawn structure",
+                            quantity: Number(document.getElementById("compound-quantity").value)
+                        }
+                    );
+                    commitPendingCompound(document.querySelector('input[name="compound-role"]:checked').value);
+                    document.getElementById("editor-frame").contentWindow.postMessage(
+                        { type: "renderResult", ok: true, atomCount: result.geometry.atoms.length, hydrogenCount: result.geometry.atoms.filter(atom => atom.element === "H").length },
+                        window.location.origin
+                    );
+                    editorModal.classList.remove("open");
+                    editorModal.setAttribute("aria-hidden", "true");
+                } catch (error) {
+                    setStatus(entryStatus, error.message || "The drawn structure could not be validated.", "error");
+                    document.getElementById("editor-frame").contentWindow?.postMessage(
+                        { type: "renderResult", ok: false, error: error.message || "Could not validate the drawn structure." },
+                        window.location.origin
+                    );
+                }
+            });
+
+            setEntryFormat();
+            renderCompoundLists();
+            loadReactionCatalogue();
+        })();
+    </script>
+</body>
+</html>

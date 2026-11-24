@@ -1,0 +1,55 @@
+{
+  "frames": {
+    "328": {
+      "frame": {
+        "x": 4,
+        "y": 4,
+        "w": 230,
+        "h": 230
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 1425,
+        "y": 812,
+        "w": 230,
+        "h": 230
+      },
+      "sourceSize": {
+        "w": 2160,
+        "h": 1215
+      }
+    },
+    "329": {
+      "frame": {
+        "x": 238,
+        "y": 4,
+        "w": 206,
+        "h": 230
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 617,
+        "y": 472,
+        "w": 206,
+        "h": 230
+      },
+      "sourceSize": {
+        "w": 2160,
+        "h": 1215
+      }
+    }
+  },
+  "meta": {
+    "app": "universe_item_manager",
+    "version": "2.0",
+    "image": "new_items_custom.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 448,
+      "h": 238
+    },
+    "scale": "1"
+  }
+}

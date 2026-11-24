@@ -1,0 +1,106 @@
+(function () {
+  const storageKey = 'chemistryx-theme';
+  const defaultTheme = 'dark';
+
+  function normalizeTheme(theme) {
+    return theme === 'light' ? 'light' : 'dark';
+  }
+
+  function getTheme() {
+    try {
+      return normalizeTheme(window.localStorage.getItem(storageKey) || defaultTheme);
+    } catch {
+      return normalizeTheme(document.documentElement.dataset.theme || defaultTheme);
+    }
+  }
+
+  function updateButtons(theme) {
+    document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+      button.setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`);
+      button.setAttribute('aria-pressed', String(theme === 'dark'));
+      const label = button.querySelector('[data-theme-label]');
+      if (label) {
+        label.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+      }
+    });
+  }
+
+  function applyTheme(theme, notify) {
+    const nextTheme = normalizeTheme(theme);
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+    updateButtons(nextTheme);
+    if (notify) {
+      window.dispatchEvent(new CustomEvent('chemistryx-theme-change', { detail: { theme: nextTheme } }));
+    }
+  }
+
+  function setTheme(theme) {
+    const nextTheme = normalizeTheme(theme);
+    try {
+      window.localStorage.setItem(storageKey, nextTheme);
+    } catch {
+      // The active page still follows the selected mode if storage is unavailable.
+    }
+    applyTheme(nextTheme, true);
+  }
+
+  function ensureThemeControl() {
+    if (!document.body || document.body.dataset.themeController || document.querySelector('[data-theme-toggle]')) {
+      return;
+    }
+    const button = document.createElement('button');
+    button.className = 'chemistryx-theme-toggle';
+    button.type = 'button';
+    button.dataset.themeToggle = '';
+    button.innerHTML = '<span class="theme-toggle-mark" aria-hidden="true">◐</span><span data-theme-label>Light mode</span>';
+    const sidebarMenu = document.querySelector('#sidebar > ul');
+    const sidebar = sidebarMenu?.closest('#sidebar');
+    if (sidebarMenu && sidebar?.getClientRects().length) {
+      button.classList.add('chemistryx-theme-toggle--inline');
+      const item = document.createElement('li');
+      item.className = 'chemistryx-theme-menu-item';
+      item.appendChild(button);
+      if (sidebarMenu.firstElementChild) {
+        sidebarMenu.firstElementChild.after(item);
+      } else {
+        sidebarMenu.appendChild(item);
+      }
+    } else {
+      if (sidebarMenu) {
+        button.classList.add('chemistryx-theme-toggle--detail');
+      }
+      document.body.appendChild(button);
+    }
+    updateButtons(getTheme());
+  }
+
+  applyTheme(getTheme(), false);
+  window.ChemistryXTheme = {
+    getTheme,
+    setTheme,
+    toggle() {
+      setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    }
+  };
+
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest('[data-theme-toggle]');
+    if (button && !button.hasAttribute('data-theme-managed')) {
+      window.ChemistryXTheme.toggle();
+    }
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === storageKey) {
+      applyTheme(event.newValue || defaultTheme, true);
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureThemeControl, { once: true });
+  } else {
+    ensureThemeControl();
+  }
+})();
