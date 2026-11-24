@@ -10,7 +10,7 @@
   "functions": {
     "api/geometry.py": {
       "includeFiles": "{api/geometry.py,api/molecule_depiction.py,api/structure_naming.py,chemistry/*.py,api/vendor/opsin/{bridge/OpsinBridge.class,opsin-core-2.9.0.jar,runtime-linux-x64.tar.gz},api/vendor/orthonym_jars/*.jar,api/vendor/rdkit_runtime_libs/*}",
-      "excludeFiles": "{serialisedAutomata/**,tests/**,docs/**,pages/**,assets/**,resources/**,test-reports/**,api/vendor/opsin/{src,java}/**,**/*.{html,js,css,cpp,csv,json,svg,png,jpg},**/{rdkit/Contrib/**,rdkit-stubs/**,PIL/**,pillow-*.dist-info/**}}",
+      "excludeFiles": "{serialisedAutomata/**,tests/**,docs/**,pages/**,assets/**,resources/**,test-reports/**,api/vendor/opsin/{src,java}/**,**/*.{html,js,css,cpp,csv,json,svg,png,jpg,pyi,pxd,pyx},**/{rdkit/Contrib/**,rdkit-stubs/**,PIL/**,pillow-*.dist-info/**}}",
       "maxDuration": 60
     }
   }
