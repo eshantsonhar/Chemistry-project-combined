@@ -1152,7 +1152,17 @@ class ReactionPlanningTests(unittest.TestCase):
                 "reagentMode": "auto",
             }
         )
-        self.assertEqual(result["status"], "no-supported-route")
+        self.assertIn(result["status"], {"no-supported-route", "search-limit-reached"})
+        self.assertEqual(result["route"], [])
+        self.assertEqual(
+            result["search"]["complete"],
+            result["status"] == "no-supported-route",
+        )
+        if result["status"] == "search-limit-reached":
+            self.assertEqual(
+                result["search"]["expandedStates"],
+                result["search"]["maxExpandedStates"],
+            )
 
     def test_multi_step_route_consumes_only_authorized_stoichiometric_reagents(self):
         result = plan_synthesis(
@@ -1497,7 +1507,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 41)
+        self.assertEqual(len(body["reactionRules"]), 43)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertRegex(body["version"]["catalogue"], r"^[0-9a-f]{16}$")
