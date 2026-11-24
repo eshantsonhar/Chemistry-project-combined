@@ -54,8 +54,13 @@ fs.cpSync(atomMakerOutput, publicDirectory, { recursive: true });
 
 console.log('Adding the ChemistryX landing page and shared theme controls...');
 fs.copyFileSync(path.join(projectRoot, 'index.html'), path.join(publicDirectory, 'index.html'));
-for (const asset of ['theme.css', 'theme.js', 'home.css', 'favicon.svg']) {
+for (const asset of ['theme.css', 'theme.js', 'launcher.css', 'favicon.svg']) {
   fs.copyFileSync(path.join(projectRoot, 'site', asset), path.join(publicDirectory, asset));
+}
+const imageDirectory = path.join(publicDirectory, 'images');
+fs.mkdirSync(imageDirectory, { recursive: true });
+for (const image of ['atommaker-homepage.jpg', 'atomview-homepage.jpg']) {
+  fs.copyFileSync(path.join(projectRoot, 'site', image), path.join(imageDirectory, image));
 }
 installThemeAssets(publicDirectory);
 
