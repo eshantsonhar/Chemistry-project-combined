@@ -7,6 +7,7 @@
     "build": "node scripts/build-combined.cjs",
     "build:atomview": "node scripts/prepare-vercel-runtime.js",
     "test:browser": "node tests/browser_organic_reactions.mjs",
+    "test:feedback": "node --test tests/test_feedback_api.mjs",
     "start": "node parser_server.js",
     "install-deps": "npm install express cors"
   },

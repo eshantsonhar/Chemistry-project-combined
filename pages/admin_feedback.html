@@ -382,21 +382,22 @@
                 <p>View and manage user feedback</p>
             </div>
 
-            <!-- Password Form -->
+            <!-- Server-verified admin token -->
             <div class="password-form" id="passwordForm">
                 <div class="form-group">
-                    <label for="password">Enter Admin Password</label>
+                    <label for="password">Enter Feedback Admin Token</label>
                     <input 
                         type="password" 
                         id="password" 
                         name="password" 
-                        placeholder="Enter password..."
+                        placeholder="Paste the Vercel admin token..."
+                        autocomplete="off"
                         required
                     >
                 </div>
                 <button type="submit" class="submit-btn" id="loginBtn">Access Feedback</button>
                 <div class="error-message" id="errorMessage">
-                    Incorrect password. Please try again.
+                    Enter the feedback admin token to continue.
                 </div>
             </div>
 
@@ -414,72 +415,89 @@
     </main>
 
     <script>
-        const CORRECT_PASSWORD = 'orsonkrennic2cracked';
-        
-        document.getElementById('loginBtn').addEventListener('click', function() {
-            const password = document.getElementById('password').value;
-            
-            if (password === CORRECT_PASSWORD) {
-                // Hide password form
-                document.getElementById('passwordForm').style.display = 'none';
-                // Show feedback list
-                document.getElementById('feedbackList').classList.add('show');
-                // Load feedback
-                loadFeedback();
-            } else {
-                // Show error message
-                document.getElementById('errorMessage').classList.add('show');
-                // Clear password field
-                document.getElementById('password').value = '';
-                // Hide error after 3 seconds
-                setTimeout(() => {
-                    document.getElementById('errorMessage').classList.remove('show');
-                }, 3000);
-            }
-        });
+        const adminTokenStorageKey = 'chemistryx-feedback-admin-token';
+        const passwordForm = document.getElementById('passwordForm');
+        const feedbackList = document.getElementById('feedbackList');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('errorMessage');
 
-        // Allow Enter key to submit
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('loginBtn').click();
-            }
-        });
+        function showLoginError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            setTimeout(() => errorMessage.classList.remove('show'), 4000);
+        }
 
-        async function loadFeedback() {
+        async function loadFeedback(token) {
             const feedbackItems = document.getElementById('feedbackItems');
             const feedbackCount = document.getElementById('feedbackCount');
-            
+
             try {
-                const response = await fetch('/api/get-feedback');
+                const response = await fetch('/api/get-feedback', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 const result = await response.json();
-                
+
                 if (response.ok && result.success) {
                     const feedbackData = result.feedback;
-                    
+
                     feedbackCount.textContent = `${feedbackData.length} feedback ${feedbackData.length === 1 ? 'entry' : 'entries'}`;
-                    
+
                     if (feedbackData.length === 0) {
                         feedbackItems.innerHTML = '<div class="no-feedback">No feedback entries yet.</div>';
-                        return;
-                    }
-                    
-                    feedbackItems.innerHTML = feedbackData.map(item => `
-                        <div class="feedback-item">
-                            <div class="feedback-meta">
-                                <span class="feedback-id">ID: ${item.id}</span>
-                                <span class="feedback-date">${formatDate(item.created_at)}</span>
+                    } else {
+                        feedbackItems.innerHTML = feedbackData.map(item => `
+                            <div class="feedback-item">
+                                <div class="feedback-meta">
+                                    <span class="feedback-id">ID: ${item.id}</span>
+                                    <span class="feedback-date">${formatDate(item.created_at)}</span>
+                                </div>
+                                <div class="feedback-content">${escapeHtml(item.feedback)}</div>
                             </div>
-                            <div class="feedback-content">${escapeHtml(item.feedback)}</div>
-                        </div>
-                    `).join('');
+                        `).join('');
+                    }
+                    return true;
                 } else {
-                    feedbackItems.innerHTML = '<div class="no-feedback">Failed to load feedback.</div>';
+                    if (response.status === 401) {
+                        sessionStorage.removeItem(adminTokenStorageKey);
+                    }
+                    showLoginError(response.status === 503
+                        ? 'Feedback admin access is not configured in Vercel.'
+                        : response.status === 401
+                            ? 'The admin token is invalid or has expired.'
+                            : result.error === 'Database configuration missing'
+                                ? 'Feedback database settings are missing from Vercel.'
+                                : 'Failed to load feedback. Please try again.');
+                    return false;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                feedbackItems.innerHTML = '<div class="no-feedback">Failed to load feedback. Please try again.</div>';
+                showLoginError('Failed to load feedback. Please try again.');
+                return false;
             }
         }
+
+        async function accessFeedback() {
+            const token = passwordInput.value.trim();
+            if (!token) {
+                showLoginError('Enter the feedback admin token to continue.');
+                return;
+            }
+
+            if (await loadFeedback(token)) {
+                sessionStorage.setItem(adminTokenStorageKey, token);
+                passwordForm.style.display = 'none';
+                feedbackList.classList.add('show');
+            } else {
+                passwordInput.value = '';
+            }
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', accessFeedback);
+        passwordInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                accessFeedback();
+            }
+        });
 
         function formatDate(isoString) {
             const date = new Date(isoString);
@@ -496,11 +514,19 @@
             if (confirm('Are you sure you want to delete all feedback? This action cannot be undone.')) {
                 try {
                     const response = await fetch('/api/clear-feedback', {
-                        method: 'DELETE'
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${sessionStorage.getItem(adminTokenStorageKey) || ''}`
+                        }
                     });
                     
                     if (response.ok) {
-                        loadFeedback();
+                        loadFeedback(sessionStorage.getItem(adminTokenStorageKey));
+                    } else if (response.status === 401) {
+                        sessionStorage.removeItem(adminTokenStorageKey);
+                        feedbackList.classList.remove('show');
+                        passwordForm.style.display = '';
+                        showLoginError('The admin token is invalid or has expired.');
                     } else {
                         alert('Failed to clear feedback. Please try again.');
                     }
@@ -510,6 +536,12 @@
                 }
             }
         });
+
+        const savedAdminToken = sessionStorage.getItem(adminTokenStorageKey);
+        if (savedAdminToken) {
+            passwordInput.value = savedAdminToken;
+            accessFeedback();
+        }
     </script>
 </body>
 </html>

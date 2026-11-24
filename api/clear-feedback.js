@@ -1,9 +1,18 @@
 // Vercel serverless function for clearing all feedback (admin)
 import { getFeedbackDatabaseConfig } from '../lib/feedback-database.cjs';
+import { authorizeFeedbackAdmin } from '../lib/feedback-admin-auth.cjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const adminAccess = authorizeFeedbackAdmin(req);
+  if (!adminAccess.configured) {
+    return res.status(503).json({ error: 'Feedback admin is not configured' });
+  }
+  if (!adminAccess.authorized) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
