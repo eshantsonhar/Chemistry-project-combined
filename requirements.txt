@@ -1,5 +1,8 @@
 # Keep Vercel's Python 3.12 environment aligned with the checksum-pinned wheels
 # staged by npm run build; the functions load that verified runtime from /tmp.
+# Install only the explicitly pinned runtime dependencies; RDKit's optional Pillow
+# dependency is not needed for the SVG-only molecular renderer.
+--no-deps
 numpy==2.5.4
 rdkit==2026.3.5
 orthonym==1.1.0
