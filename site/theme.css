@@ -20,6 +20,71 @@ html[data-theme="light"] {
   --cx-accent: #4a6821;
 }
 
+html[data-theme="light"] body:not(.chemistryx-home) {
+  --base: var(--cx-bg);
+  --panel: var(--cx-panel);
+  --line: var(--cx-line);
+  --text: var(--cx-ink);
+  --muted: var(--cx-muted);
+  --accent: #a8432c;
+  --cyan: #087c78;
+  --blue: #315aa1;
+  --green: #237544;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .notice,
+html[data-theme="light"] body:not(.chemistryx-home) .panel,
+html[data-theme="light"] body:not(.chemistryx-home) .compound-list,
+html[data-theme="light"] body:not(.chemistryx-home) .result-step,
+html[data-theme="light"] body:not(.chemistryx-home) .result-empty {
+  background: var(--cx-panel) !important;
+  border-color: var(--cx-line) !important;
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .workspace-toolbar,
+html[data-theme="light"] body:not(.chemistryx-home) .results-heading,
+html[data-theme="light"] body:not(.chemistryx-home) .route-network {
+  background: var(--cx-panel-raised) !important;
+  border-color: var(--cx-line) !important;
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .scope-badge,
+html[data-theme="light"] body:not(.chemistryx-home) .step-index {
+  border-color: var(--cx-line) !important;
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .scope-badge:first-child {
+  border-color: #087c78 !important;
+  color: #087c78 !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .button {
+  border-color: var(--cx-line) !important;
+  background: var(--cx-panel-raised) !important;
+  color: var(--cx-ink) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .button.primary {
+  border-color: #a8432c !important;
+  background: #a8432c !important;
+  color: #fff !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .button.danger {
+  color: #a8432c !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .compound-card .smiles {
+  color: #454650 !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) #molecule-viewer {
+  background: #fff !important;
+}
+
 html[data-theme="light"] {
   --base-clr: #f4f5f8;
   --line-clr: #d8dce5;
