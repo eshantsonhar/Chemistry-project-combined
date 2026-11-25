@@ -1288,7 +1288,11 @@
             
             // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000011);
+            const updateSceneBackground = () => {
+                scene.background = new THREE.Color(document.documentElement.dataset.theme === 'light' ? 0xffffff : 0x000011);
+            };
+            updateSceneBackground();
+            window.addEventListener('chemistryx-theme-change', updateSceneBackground);
 
             // Camera
             camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
