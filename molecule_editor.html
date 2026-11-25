@@ -20,6 +20,37 @@
         h3 { margin-top: 0; color: #1b5e20; border-bottom: 2px solid #2e7d32; padding-bottom: 8px; font-size: 16px; }
         .element-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; margin: 2px; color: #fff; }
         #send-status { align-self: center; color: #444; font-size: 12px; }
+        #send-status[data-failed="false"] { color: #1b5e20; }
+        #send-status[data-failed="true"] { color: #b71c1c; }
+
+        html[data-theme="dark"] #sidebar {
+            background: var(--cx-panel, #191b20);
+            border-right-color: var(--cx-line, rgba(235, 231, 220, 0.13));
+        }
+        html[data-theme="dark"] #workspace {
+            background: var(--cx-bg, #101114);
+        }
+        html[data-theme="dark"] #workspace.flash-error {
+            background: #482326;
+        }
+        html[data-theme="dark"] #sidebar .instructions {
+            color: var(--cx-muted, #a4a5ad) !important;
+        }
+        html[data-theme="dark"] #sidebar .instructions b {
+            color: var(--cx-ink, #f3f1ec) !important;
+        }
+        html[data-theme="dark"] #sidebar h3 {
+            color: var(--cx-accent, #d3ff71) !important;
+            border-bottom-color: rgba(211, 255, 113, 0.38) !important;
+        }
+        html[data-theme="dark"] #send-status[data-failed="false"] { color: #a7e8b3; }
+        html[data-theme="dark"] #send-status[data-failed="true"] { color: #ffb4ab; }
+        html[data-theme="dark"] #canvas line[stroke="#222"] {
+            stroke: #e4e6eb;
+        }
+        html[data-theme="dark"] #canvas circle[fill="#111111"] {
+            fill: var(--cx-ink, #f3f1ec);
+        }
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
@@ -30,6 +61,16 @@
             h3 { font-size: 14px; }
             .instructions { font-size: 11px; }
             .element-badge { font-size: 10px; padding: 1px 5px; }
+        }
+
+        @media (max-width: 768px) {
+            html[data-theme="dark"] #sidebar {
+                border-bottom-color: var(--cx-line, rgba(235, 231, 220, 0.13));
+            }
+            html[data-theme="dark"] #controls {
+                background: var(--cx-panel, #191b20);
+                border-top-color: var(--cx-line, rgba(235, 231, 220, 0.13));
+            }
         }
 
         @media (max-width: 480px) {
@@ -380,7 +421,7 @@
         function setSendStatus(message, failed = false) {
             const status = document.getElementById('send-status');
             status.textContent = message;
-            status.style.color = failed ? '#b71c1c' : '#1b5e20';
+            status.dataset.failed = String(failed);
         }
 
         window.addEventListener('message', event => {
