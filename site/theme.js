@@ -53,7 +53,7 @@
     button.className = 'chemistryx-theme-toggle';
     button.type = 'button';
     button.dataset.themeToggle = '';
-    button.innerHTML = '<span class="theme-toggle-mark" aria-hidden="true">◐</span><span data-theme-label>Light mode</span>';
+    button.innerHTML = '<svg class="theme-toggle-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18V3Z" fill="currentColor"/></svg><span data-theme-label>Light mode</span>';
     const sidebarMenu = document.querySelector('#sidebar > ul');
     const sidebar = sidebarMenu?.closest('#sidebar');
     if (sidebarMenu && sidebar?.getClientRects().length) {

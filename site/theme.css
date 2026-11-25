@@ -132,8 +132,20 @@ html[data-theme="light"] .molecule-entry-panel {
   position: static;
   width: 100%;
   margin: 4px 0;
+  padding: .85em;
   justify-content: flex-start;
+  border-color: transparent;
+  border-radius: .5em;
+  background: transparent;
+  color: var(--text-clr);
   box-shadow: none;
+  font: inherit;
+  line-height: 1.5rem;
+}
+
+.chemistryx-theme-toggle--inline:hover {
+  transform: none;
+  background: var(--hover-clr);
 }
 
 .chemistryx-theme-toggle--detail {
@@ -143,8 +155,29 @@ html[data-theme="light"] .molecule-entry-panel {
 }
 
 .theme-toggle-mark {
+  display: block;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   color: var(--cx-accent);
-  font-size: 15px;
+}
+
+body.sidebar-collapsed #sidebar .chemistryx-theme-menu-item {
+  display: flex;
+  justify-content: center;
+}
+
+body.sidebar-collapsed #sidebar .chemistryx-theme-toggle--inline {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  padding: 12px;
+  justify-content: center;
+  gap: 0;
+}
+
+body.sidebar-collapsed #sidebar .chemistryx-theme-toggle--inline [data-theme-label] {
+  display: none;
 }
 
 @media (max-width: 1024px) {
