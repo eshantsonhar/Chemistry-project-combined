@@ -247,6 +247,11 @@
             margin-bottom: 15px;
         }
 
+        html[data-theme="light"] .simulation-container,
+        html[data-theme="light"] #equilibrium-canvas {
+            background: #fff;
+        }
+
         .zoom-info {
             color: var(--secondary-text-clr);
             font-size: 0.85rem;
@@ -1450,7 +1455,12 @@
             
             // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000011);
+            const updateSceneBackground = () => {
+                const background = document.documentElement.dataset.theme === 'light' ? 0xffffff : 0x000011;
+                scene.background = new THREE.Color(background);
+            };
+            updateSceneBackground();
+            window.addEventListener('chemistryx-theme-change', updateSceneBackground);
             
             // Camera
             camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
