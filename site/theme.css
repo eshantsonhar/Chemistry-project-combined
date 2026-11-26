@@ -159,6 +159,22 @@ html[data-theme="light"] body:not(.chemistryx-home) a {
   color: #315aa1;
 }
 
+html[data-theme="light"] body:not(.chemistryx-home) nav {
+  background: rgba(255, 254, 250, 0.96) !important;
+  border-color: var(--line-clr) !important;
+  color: var(--text-clr) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) .renderer-viewport {
+  background: var(--cx-bg) !important;
+}
+
+html[data-theme="light"] body:not(.chemistryx-home) #geometryStatus {
+  background: rgba(255, 254, 250, 0.96) !important;
+  border: 1px solid var(--cx-line);
+  color: var(--cx-muted) !important;
+}
+
 html[data-theme="light"] #sidebar {
   background: rgba(255, 254, 250, 0.98) !important;
   border-color: var(--line-clr) !important;

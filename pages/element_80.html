@@ -538,12 +538,33 @@
         let atoms = [];
         let bonds = [];
 
+        function getInitialTheme() {
+            if (document.documentElement.dataset.theme) {
+                return document.documentElement.dataset.theme;
+            }
+            try {
+                return localStorage.getItem('chemistryx-theme') === 'light' ? 'light' : 'dark';
+            } catch {
+                return 'dark';
+            }
+        }
+
+        function updateSceneTheme(theme) {
+            if (scene) {
+                scene.background = new THREE.Color(theme === 'light' ? 0xf4f3ef : 0x000011);
+            }
+        }
+
+        window.addEventListener('chemistryx-theme-change', event => {
+            updateSceneTheme(event.detail?.theme === 'light' ? 'light' : 'dark');
+        });
+
         function initThreeJS() {
             const container = document.getElementById('renderer');
 
             // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000011);
+            updateSceneTheme(getInitialTheme());
 
             // Camera
             camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);

@@ -14,7 +14,16 @@ const elementCrystalModels = JSON.parse(
 );
 const cobaltPage = readFileSync(path.join(root, "pages", "element_27.html"), "utf8");
 const generator = readFileSync(path.join(root, "generate_element_pages.js"), "utf8");
+const themeCss = readFileSync(path.join(root, "site", "theme.css"), "utf8");
+const sceneThemePattern = /function updateSceneTheme\(theme\)[\s\S]*?scene\.background = new THREE\.Color\(theme === 'light' \? 0xf4f3ef : 0x000011\)/;
 assert.match(periodicTable, /Validated molecular and crystal models/);
+assert.match(themeCss, /html\[data-theme="light"\] body:not\(\.chemistryx-home\) nav/);
+assert.match(themeCss, /html\[data-theme="light"\] body:not\(\.chemistryx-home\) \.renderer-viewport/);
+assert.match(themeCss, /html\[data-theme="light"\] body:not\(\.chemistryx-home\) #geometryStatus/);
+assert.match(template, /function getInitialTheme\(\)/);
+assert.match(template, /chemistryx-theme-change/);
+assert.match(template, sceneThemePattern);
+assert.match(template, /updateSceneTheme\(getInitialTheme\(\)\)/);
 assert.deepEqual(elementData["27"].crystal_structure, {
     type: "rocksalt",
     cation: "Co",
@@ -38,6 +47,11 @@ const hasColorFallback =
     /function getAtomColor\(element\)/.test(template) &&
     /new THREE\.Color\(\)\.setHSL\(hue, 0\.68, 0\.62\)/.test(template);
 assert.ok(hasColorFallback, "Unlisted elements should receive deterministic, distinct colors.");
+for (const atomicNumber of Object.keys(elementData)) {
+    const page = readFileSync(path.join(root, "pages", `element_${atomicNumber}.html`), "utf8");
+    assert.match(page, sceneThemePattern, `Element ${atomicNumber} should use the selected scene theme.`);
+    assert.match(page, /updateSceneTheme\(getInitialTheme\(\)\)/);
+}
 for (const [atomicNumber, element] of crystalElements) {
     const structure = element.crystal_structure;
     assert.ok(crystalTypes.has(structure.type), `${element.name} uses a supported crystal prototype.`);
@@ -67,6 +81,7 @@ for (const [atomicNumber, element] of crystalElements) {
         page.includes(`const crystalStructure = ${JSON.stringify(structure)}`),
         `${element.name}'s generated page should include its crystal data.`
     );
+    assert.match(page, /chemistryx-theme-change/);
     assert.match(page, /<script src="\.\.\/crystal-renderer\.js"><\/script>/);
     assert.match(page, /buildCubicCrystal\(crystalStructure, displayedFormula\)/);
 }
