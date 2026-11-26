@@ -29,18 +29,21 @@
   function syncFrameTheme(frame, theme) {
     try {
       const frameWindow = frame.contentWindow;
+      const frameRoot = frameWindow?.document?.documentElement;
       const frameController = frameWindow?.ChemistryXTheme;
       if (frameController) {
-        if (frameController.getTheme() !== theme) {
+        if (frameController.getTheme() !== theme || frameRoot?.dataset.theme !== theme) {
           frameController.setTheme(theme);
         }
         return;
       }
 
-      const frameRoot = frame.contentDocument?.documentElement;
       if (frameRoot) {
         frameRoot.dataset.theme = theme;
         frameRoot.style.colorScheme = theme;
+        if (frameWindow?.CustomEvent) {
+          frameWindow.dispatchEvent(new frameWindow.CustomEvent('chemistryx-theme-change', { detail: { theme } }));
+        }
       }
     } catch {
       // Cross-origin frames keep their own theme selection.

@@ -15,15 +15,25 @@ const elementCrystalModels = JSON.parse(
 const cobaltPage = readFileSync(path.join(root, "pages", "element_27.html"), "utf8");
 const generator = readFileSync(path.join(root, "generate_element_pages.js"), "utf8");
 const themeCss = readFileSync(path.join(root, "site", "theme.css"), "utf8");
+const buildScript = readFileSync(path.join(root, "scripts", "build-combined.cjs"), "utf8");
+const themeScript = readFileSync(path.join(root, "site", "theme.js"), "utf8");
 const sceneThemePattern = /function updateSceneTheme\(theme\)[\s\S]*?scene\.background = new THREE\.Color\(theme === 'light' \? 0xf4f3ef : 0x000011\)/;
 assert.match(periodicTable, /Validated molecular and crystal models/);
+assert.match(periodicTable, /href="\.\.\/site\/theme\.css"/);
+assert.match(periodicTable, /src="\.\.\/site\/theme\.js" defer/);
+assert.ok(buildScript.includes(".replace(/href=[\"']\\.\\.\\/site\\/theme\\.css"));
+assert.ok(buildScript.includes(".replace(/src=[\"']\\.\\.\\/site\\/theme\\.js"));
 assert.match(themeCss, /html\[data-theme="light"\] body:not\(\.chemistryx-home\) nav/);
 assert.match(themeCss, /html\[data-theme="light"\] body:not\(\.chemistryx-home\) \.renderer-viewport/);
 assert.match(themeCss, /html\[data-theme="light"\] body:not\(\.chemistryx-home\) #geometryStatus/);
+assert.match(themeScript, /frameWindow\.dispatchEvent\(new frameWindow\.CustomEvent\('chemistryx-theme-change'/);
+assert.match(themeScript, /frameController\.getTheme\(\) !== theme \|\| frameRoot\?\.dataset\.theme !== theme/);
 assert.match(template, /function getInitialTheme\(\)/);
 assert.match(template, /chemistryx-theme-change/);
 assert.match(template, sceneThemePattern);
 assert.match(template, /updateSceneTheme\(getInitialTheme\(\)\)/);
+assert.match(template, /href="\.\.\/site\/theme\.css"/);
+assert.match(template, /src="\.\.\/site\/theme\.js" defer/);
 assert.deepEqual(elementData["27"].crystal_structure, {
     type: "rocksalt",
     cation: "Co",
@@ -51,6 +61,8 @@ for (const atomicNumber of Object.keys(elementData)) {
     const page = readFileSync(path.join(root, "pages", `element_${atomicNumber}.html`), "utf8");
     assert.match(page, sceneThemePattern, `Element ${atomicNumber} should use the selected scene theme.`);
     assert.match(page, /updateSceneTheme\(getInitialTheme\(\)\)/);
+    assert.match(page, /href="\.\.\/site\/theme\.css"/);
+    assert.match(page, /src="\.\.\/site\/theme\.js" defer/);
 }
 for (const [atomicNumber, element] of crystalElements) {
     const structure = element.crystal_structure;

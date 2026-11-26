@@ -26,6 +26,9 @@ function installThemeAssets(directory) {
     }
 
     let html = fs.readFileSync(entryPath, 'utf8');
+    html = html
+      .replace(/href=["']\.\.\/site\/theme\.css["']/gi, 'href="/theme.css"')
+      .replace(/src=["']\.\.\/site\/theme\.js["']/gi, 'src="/theme.js"');
     if (!/<link[^>]+rel=["'][^"']*icon/i.test(html)) {
       html = html.replace(/<\/head>/i, '  <link rel="icon" type="image/svg+xml" href="/favicon.svg">\n</head>');
     }
