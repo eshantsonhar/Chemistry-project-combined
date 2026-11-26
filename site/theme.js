@@ -1,6 +1,7 @@
 (function () {
   const storageKey = 'chemistryx-theme';
   const defaultTheme = 'dark';
+  const synchronizedFrames = new WeakSet();
 
   function normalizeTheme(theme) {
     return theme === 'light' ? 'light' : 'dark';
@@ -25,11 +26,43 @@
     });
   }
 
+  function syncFrameTheme(frame, theme) {
+    try {
+      const frameWindow = frame.contentWindow;
+      const frameController = frameWindow?.ChemistryXTheme;
+      if (frameController) {
+        if (frameController.getTheme() !== theme) {
+          frameController.setTheme(theme);
+        }
+        return;
+      }
+
+      const frameRoot = frame.contentDocument?.documentElement;
+      if (frameRoot) {
+        frameRoot.dataset.theme = theme;
+        frameRoot.style.colorScheme = theme;
+      }
+    } catch {
+      // Cross-origin frames keep their own theme selection.
+    }
+  }
+
+  function syncEmbeddedFrames(theme) {
+    document.querySelectorAll('iframe').forEach((frame) => {
+      if (!synchronizedFrames.has(frame)) {
+        frame.addEventListener('load', () => syncEmbeddedFrames(getTheme()));
+        synchronizedFrames.add(frame);
+      }
+      syncFrameTheme(frame, theme);
+    });
+  }
+
   function applyTheme(theme, notify) {
     const nextTheme = normalizeTheme(theme);
     document.documentElement.dataset.theme = nextTheme;
     document.documentElement.style.colorScheme = nextTheme;
     updateButtons(nextTheme);
+    syncEmbeddedFrames(nextTheme);
     if (notify) {
       window.dispatchEvent(new CustomEvent('chemistryx-theme-change', { detail: { theme: nextTheme } }));
     }
